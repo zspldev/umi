@@ -1,10 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Mic, X, Volume2, Loader2, ArrowRightLeft, Square } from 'lucide-react';
+import { Mic, X, Loader2, ArrowRightLeft, Square } from 'lucide-react';
 import { useSessionStore, UmiTurn } from '@/lib/store';
 import { useVoiceRecorder } from '@workspace/integrations-openai-ai-react/audio';
 import { useTranscribeAudio, useTranslateText, useSpeakText } from '@workspace/api-client-react';
+import { toast } from 'sonner';
 
 const langMap: Record<string, string> = {
   en: 'English',
@@ -27,7 +28,8 @@ export default function Session() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [lastTurn, setLastTurn] = useState<UmiTurn | null>(null);
 
-  const { isRecording, startRecording, stopRecording } = useVoiceRecorder();
+  const { state: recordingState, startRecording, stopRecording } = useVoiceRecorder();
+  const isRecording = recordingState === "recording";
   const transcribeMutation = useTranscribeAudio();
   const translateMutation = useTranslateText();
   const speakMutation = useSpeakText();
@@ -44,76 +46,84 @@ export default function Session() {
   if (!loaded) return null;
   if (!session) return null;
 
+  const blobToBase64 = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        resolve(result.split(',')[1]);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+
   const handleRecordToggle = async () => {
     if (isRecording) {
+      let blob: Blob;
       try {
-        const blob = await stopRecording();
-        if (!blob) return;
-        
-        setIsProcessing(true);
-
-        const reader = new FileReader();
-        reader.readAsDataURL(blob);
-        reader.onloadend = async () => {
-          try {
-            const base64data = (reader.result as string).split(',')[1];
-            const mimeType = blob.type || 'audio/webm';
-            
-            const activeLang = activeSpeaker === 1 ? session.speakerOneLang : session.speakerTwoLang;
-            const targetLang = activeSpeaker === 1 ? session.speakerTwoLang : session.speakerOneLang;
-
-            const transcribeRes = await transcribeMutation.mutateAsync({
-              data: {
-                audioBase64: base64data,
-                mimeType,
-                language: activeLang
-              }
-            });
-
-            if (!transcribeRes.text) throw new Error("No transcription text");
-
-            const translateRes = await translateMutation.mutateAsync({
-              data: {
-                text: transcribeRes.text,
-                fromLang: activeLang,
-                toLang: targetLang
-              }
-            });
-
-            if (!translateRes.translatedText) throw new Error("No translation text");
-
-            const speakRes = await speakMutation.mutateAsync({
-              data: {
-                text: translateRes.translatedText,
-                lang: targetLang
-              }
-            });
-
-            if (speakRes.audioBase64) {
-              const audio = new Audio(`data:${speakRes.mimeType};base64,${speakRes.audioBase64}`);
-              audio.play();
-            }
-
-            const turn = addTurn(session.id, {
-              speaker: activeSpeaker,
-              original: transcribeRes.text,
-              translated: translateRes.translatedText
-            });
-            
-            setLastTurn(turn);
-            setActiveSpeaker(activeSpeaker === 1 ? 2 : 1);
-          } catch (e) {
-            console.error("Processing error", e);
-          } finally {
-            setIsProcessing(false);
-          }
-        };
+        blob = await stopRecording();
       } catch (e) {
-        console.error("Stop recording failed", e);
+        toast.error("Could not stop recording.");
+        return;
+      }
+
+      if (!blob || blob.size === 0) {
+        toast.error("Recording was empty — please try again.");
+        return;
+      }
+
+      setIsProcessing(true);
+      try {
+        const base64data = await blobToBase64(blob);
+        const mimeType = blob.type || 'audio/webm';
+
+        const activeLang = activeSpeaker === 1 ? session.speakerOneLang : session.speakerTwoLang;
+        const targetLang = activeSpeaker === 1 ? session.speakerTwoLang : session.speakerOneLang;
+
+        const transcribeRes = await transcribeMutation.mutateAsync({
+          data: { audioBase64: base64data, mimeType, language: activeLang }
+        });
+
+        if (!transcribeRes.text) throw new Error("Transcription returned empty text");
+
+        const translateRes = await translateMutation.mutateAsync({
+          data: { text: transcribeRes.text, fromLang: activeLang, toLang: targetLang }
+        });
+
+        if (!translateRes.translatedText) throw new Error("Translation returned empty text");
+
+        const speakRes = await speakMutation.mutateAsync({
+          data: { text: translateRes.translatedText, lang: targetLang }
+        });
+
+        if (speakRes.audioBase64) {
+          const audio = new Audio(`data:${speakRes.mimeType ?? 'audio/mpeg'};base64,${speakRes.audioBase64}`);
+          audio.play().catch(() => {
+            toast.error("Audio playback was blocked — tap the screen and try again.");
+          });
+        }
+
+        const turn = addTurn(session.id, {
+          speaker: activeSpeaker,
+          original: transcribeRes.text,
+          translated: translateRes.translatedText
+        });
+
+        setLastTurn(turn);
+        setActiveSpeaker(activeSpeaker === 1 ? 2 : 1);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Something went wrong";
+        toast.error(msg);
+        console.error("Processing error", e);
+      } finally {
         setIsProcessing(false);
       }
     } else {
-      await startRecording();
+      try {
+        await startRecording();
+      } catch (e) {
+        toast.error("Microphone access denied. Please allow microphone permissions and try again.");
+      }
     }
   };
 
