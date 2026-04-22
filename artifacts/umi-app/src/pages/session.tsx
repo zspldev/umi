@@ -130,7 +130,7 @@ export default function Session() {
   const isSpeaker1Active = activeSpeaker === 1;
 
   return (
-    <div className="min-h-[100dvh] w-full max-w-[390px] mx-auto bg-background flex flex-col font-sans relative overflow-hidden">
+    <div className="h-[100dvh] w-full max-w-[390px] mx-auto bg-background flex flex-col font-sans relative overflow-hidden">
       
       <div className="absolute top-0 w-full z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/20 to-transparent">
         <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-semibold tracking-wide border border-white/10 flex items-center gap-2 shadow-sm">
@@ -149,17 +149,17 @@ export default function Session() {
         </Button>
       </div>
 
-      <div className="flex-1 bg-secondary text-white p-6 pt-20 flex flex-col relative pb-10 transition-colors duration-500" style={{ opacity: isSpeaker1Active ? 1 : 0.5 }}>
+      <div className="flex-1 bg-secondary text-white p-4 pt-16 flex flex-col relative pb-4 transition-colors duration-500" style={{ opacity: isSpeaker1Active ? 1 : 0.5 }}>
         <div className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 z-10 bg-white shadow-xl rounded-full p-1.5 border border-muted/20 cursor-pointer" onClick={() => !isRecording && !isProcessing && setActiveSpeaker(activeSpeaker === 1 ? 2 : 1)} data-testid="button-switch-speaker">
           <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
             <ArrowRightLeft className="w-5 h-5 rotate-90" />
           </div>
         </div>
 
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-2">
           <div className="flex flex-col">
-            <span className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-1">Speaker 1 • {langMap[session.speakerOneLang]}</span>
-            <span className="text-lg font-bold text-white">{session.speakerOneName}</span>
+            <span className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-0.5">Speaker 1 • {langMap[session.speakerOneLang]}</span>
+            <span className="text-base font-bold text-white">{session.speakerOneName}</span>
           </div>
           {isProcessing && activeSpeaker === 1 && (
             <div className="px-3 py-1 bg-white/10 rounded-full text-white/90 text-sm font-medium flex items-center gap-2">
@@ -171,18 +171,18 @@ export default function Session() {
 
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
           {lastTurn && lastTurn.speaker === 1 && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-              <p dir="auto" className={`text-xl font-medium leading-snug text-white/60 ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
+              <p dir="auto" className={`text-xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.original}
               </p>
-              <p dir="auto" className={`text-3xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
+              <p dir="auto" className={`text-xl italic font-medium leading-snug text-white/80 ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>
           )}
           {lastTurn && lastTurn.speaker === 2 && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-               <p dir="auto" className={`text-3xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
+               <p dir="auto" className={`text-xl italic font-medium leading-snug text-white/80 ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>
@@ -190,11 +190,11 @@ export default function Session() {
         </div>
       </div>
 
-      <div className="flex-1 bg-[#F8F9FA] text-secondary p-6 pt-10 flex flex-col relative pb-24 transition-colors duration-500" style={{ opacity: !isSpeaker1Active ? 1 : 0.5 }}>
-        <div className="flex justify-between items-center mb-4">
+      <div className="flex-1 bg-[#F8F9FA] text-secondary p-4 pt-8 flex flex-col relative pb-20 transition-colors duration-500" style={{ opacity: !isSpeaker1Active ? 1 : 0.5 }}>
+        <div className="flex justify-between items-center mb-2">
           <div className="flex flex-col">
-            <span className="text-secondary/50 text-xs font-semibold uppercase tracking-wider mb-1">Speaker 2 • {langMap[session.speakerTwoLang]}</span>
-            <span className="text-lg font-bold text-secondary">{session.speakerTwoName}</span>
+            <span className="text-secondary/50 text-xs font-semibold uppercase tracking-wider mb-0.5">Speaker 2 • {langMap[session.speakerTwoLang]}</span>
+            <span className="text-base font-bold text-secondary">{session.speakerTwoName}</span>
           </div>
           {isProcessing && activeSpeaker === 2 && (
              <div className="px-3 py-1 bg-secondary/5 rounded-full text-secondary/70 text-sm font-medium flex items-center gap-1.5">
@@ -206,18 +206,18 @@ export default function Session() {
 
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
           {lastTurn && lastTurn.speaker === 2 && (
-             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-              <p dir="auto" className={`text-xl font-medium leading-snug text-secondary/60 ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
+             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
+              <p dir="auto" className={`text-xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.original}
               </p>
-              <p dir="auto" className={`text-3xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
+              <p dir="auto" className={`text-xl italic font-medium leading-snug text-secondary/70 ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>
           )}
           {lastTurn && lastTurn.speaker === 1 && (
-             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-              <p dir="auto" className={`text-3xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
+             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
+              <p dir="auto" className={`text-xl italic font-medium leading-snug text-secondary/70 ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>

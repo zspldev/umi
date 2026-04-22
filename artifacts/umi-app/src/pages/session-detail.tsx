@@ -94,10 +94,10 @@ export default function SessionDetail() {
                 {speakerName}
               </span>
               <div className={`p-4 rounded-2xl ${!isSpeakerOne ? 'bg-primary text-white rounded-tr-sm' : 'bg-white shadow-sm border border-muted/50 text-secondary rounded-tl-sm'}`}>
-                <p dir="auto" className={`text-sm opacity-70 mb-2 pb-2 border-b ${!isSpeakerOne ? 'border-white/20' : 'border-muted'} ${['hi', 'mr'].includes(lang) ? "font-devanagari" : ""}`}>
+                <p dir="auto" className={`text-base font-medium mb-2 pb-2 border-b ${!isSpeakerOne ? 'border-white/20' : 'border-muted'} ${['hi', 'mr'].includes(lang) ? "font-devanagari" : ""}`}>
                   {turn.original}
                 </p>
-                <p dir="auto" className={`text-base font-medium ${['hi', 'mr'].includes(isSpeakerOne ? session.speakerTwoLang : session.speakerOneLang) ? "font-devanagari" : ""}`}>
+                <p dir="auto" className={`text-base italic font-medium ${!isSpeakerOne ? 'text-white/80' : 'text-secondary/70'} ${['hi', 'mr'].includes(isSpeakerOne ? session.speakerTwoLang : session.speakerOneLang) ? "font-devanagari" : ""}`}>
                   {turn.translated}
                 </p>
               </div>
