@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, Trash2, MessageSquare, Clock, Globe } from 'lucide-react';
+import { ArrowLeft, Trash2, MessageSquare, Clock, Globe, Archive } from 'lucide-react';
 
 export function History() {
   const sessions = [
@@ -79,7 +79,7 @@ export function History() {
 
         <div className="mt-8 text-center px-8">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-secondary/5 text-secondary/40 mb-3">
-            <History className="w-6 h-6" />
+            <Archive className="w-6 h-6" />
           </div>
           <p className="text-sm text-secondary/50 font-medium">
             Sessions are stored securely on this device only.
