@@ -14,3 +14,50 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Accepts a base64-encoded audio blob and returns the transcription
+ * @summary Transcribe audio to text
+ */
+export const TranscribeAudioBody = zod.object({
+  audioBase64: zod.string().describe("Base64-encoded audio data (WebM or WAV)"),
+  mimeType: zod.string().describe("MIME type of the audio (e.g. audio\/webm)"),
+  language: zod
+    .string()
+    .optional()
+    .describe("BCP-47 language code hint (e.g. en, hi, mr, es, ja, de)"),
+});
+
+export const TranscribeAudioResponse = zod.object({
+  text: zod.string().describe("Transcribed text"),
+});
+
+/**
+ * Translates text from one language to another using GPT
+ * @summary Translate text between languages
+ */
+export const TranslateTextBody = zod.object({
+  text: zod.string().describe("Text to translate"),
+  fromLang: zod.string().describe("Source language code (e.g. hi, en, mr)"),
+  toLang: zod.string().describe("Target language code (e.g. en, hi, es)"),
+});
+
+export const TranslateTextResponse = zod.object({
+  translatedText: zod.string().describe("Translated text"),
+});
+
+/**
+ * Generates TTS audio from text and returns base64-encoded MP3
+ * @summary Convert text to speech
+ */
+export const SpeakTextBody = zod.object({
+  text: zod.string().describe("Text to convert to speech"),
+  lang: zod
+    .string()
+    .describe("Language code for pronunciation guidance (e.g. en, hi, es)"),
+});
+
+export const SpeakTextResponse = zod.object({
+  audioBase64: zod.string().describe("Base64-encoded MP3 audio"),
+  mimeType: zod.string().describe("MIME type of the audio (audio\/mpeg)"),
+});

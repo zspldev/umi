@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/umi-app/"
+title = "UMI App"
+version = "1.0.0"
+id = "artifacts/umi-app"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/umi-app/" ]
+localPort = 25145
+
+[services.development]
+run = "pnpm --filter @workspace/umi-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/umi-app", "run", "build" ]
+publicDir = "artifacts/umi-app/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "25145"
+BASE_PATH = "/umi-app/"

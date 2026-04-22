@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: umi
+    description: UMI voice interpreter operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /umi/transcribe:
+    post:
+      operationId: transcribeAudio
+      tags: [umi]
+      summary: Transcribe audio to text
+      description: Accepts a base64-encoded audio blob and returns the transcription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranscribeRequest"
+      responses:
+        "200":
+          description: Transcription result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranscribeResponse"
+
+  /umi/translate:
+    post:
+      operationId: translateText
+      tags: [umi]
+      summary: Translate text between languages
+      description: Translates text from one language to another using GPT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TranslateRequest"
+      responses:
+        "200":
+          description: Translation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TranslateResponse"
+
+  /umi/speak:
+    post:
+      operationId: speakText
+      tags: [umi]
+      summary: Convert text to speech
+      description: Generates TTS audio from text and returns base64-encoded MP3
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpeakRequest"
+      responses:
+        "200":
+          description: Audio result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpeakResponse"
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +97,79 @@ components:
       required:
         - status
 
+    TranscribeRequest:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+          description: Base64-encoded audio data (WebM or WAV)
+        mimeType:
+          type: string
+          description: MIME type of the audio (e.g. audio/webm)
+        language:
+          type: string
+          description: BCP-47 language code hint (e.g. en, hi, mr, es, ja, de)
+      required:
+        - audioBase64
+        - mimeType
+
+    TranscribeResponse:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Transcribed text
+      required:
+        - text
+
+    TranslateRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Text to translate
+        fromLang:
+          type: string
+          description: Source language code (e.g. hi, en, mr)
+        toLang:
+          type: string
+          description: Target language code (e.g. en, hi, es)
+      required:
+        - text
+        - fromLang
+        - toLang
+
+    TranslateResponse:
+      type: object
+      properties:
+        translatedText:
+          type: string
+          description: Translated text
+      required:
+        - translatedText
+
+    SpeakRequest:
+      type: object
+      properties:
+        text:
+          type: string
+          description: Text to convert to speech
+        lang:
+          type: string
+          description: Language code for pronunciation guidance (e.g. en, hi, es)
+      required:
+        - text
+        - lang
+
+    SpeakResponse:
+      type: object
+      properties:
+        audioBase64:
+          type: string
+          description: Base64-encoded MP3 audio
+        mimeType:
+          type: string
+          description: MIME type of the audio (audio/mpeg)
+      required:
+        - audioBase64
+        - mimeType

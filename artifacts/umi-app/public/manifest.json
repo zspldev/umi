@@ -1,0 +1,20 @@
+{
+  "name": "UMI — Universal Interpreter",
+  "short_name": "UMI",
+  "description": "Live voice interpreter for real-time multilingual conversations",
+  "start_url": "/umi-app/",
+  "scope": "/umi-app/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1E2D45",
+  "theme_color": "#F59E0B",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    {
+      "src": "/umi-app/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -7,3 +7,9 @@
  */
 
 export * from "./healthStatus";
+export * from "./speakRequest";
+export * from "./speakResponse";
+export * from "./transcribeRequest";
+export * from "./transcribeResponse";
+export * from "./translateRequest";
+export * from "./translateResponse";

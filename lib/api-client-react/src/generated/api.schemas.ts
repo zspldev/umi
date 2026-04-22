@@ -8,3 +8,45 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface TranscribeRequest {
+  /** Base64-encoded audio data (WebM or WAV) */
+  audioBase64: string;
+  /** MIME type of the audio (e.g. audio/webm) */
+  mimeType: string;
+  /** BCP-47 language code hint (e.g. en, hi, mr, es, ja, de) */
+  language?: string;
+}
+
+export interface TranscribeResponse {
+  /** Transcribed text */
+  text: string;
+}
+
+export interface TranslateRequest {
+  /** Text to translate */
+  text: string;
+  /** Source language code (e.g. hi, en, mr) */
+  fromLang: string;
+  /** Target language code (e.g. en, hi, es) */
+  toLang: string;
+}
+
+export interface TranslateResponse {
+  /** Translated text */
+  translatedText: string;
+}
+
+export interface SpeakRequest {
+  /** Text to convert to speech */
+  text: string;
+  /** Language code for pronunciation guidance (e.g. en, hi, es) */
+  lang: string;
+}
+
+export interface SpeakResponse {
+  /** Base64-encoded MP3 audio */
+  audioBase64: string;
+  /** MIME type of the audio (audio/mpeg) */
+  mimeType: string;
+}
