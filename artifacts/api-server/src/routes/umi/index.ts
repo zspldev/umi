@@ -119,4 +119,50 @@ router.post("/speak", async (req, res) => {
   }
 });
 
+const SCRIPT_RULES = `MANDATORY SCRIPT RULES:
+- Hindi → MUST use Devanagari script (नमस्ते). NEVER use Urdu/Arabic/Nastaliq script.
+- Marathi → MUST use Devanagari script (नमस्कार). NEVER use Arabic script.
+- English → Latin alphabet only.
+- Spanish → Latin alphabet only.
+- German → Latin alphabet only.
+- Japanese → Japanese script (Hiragana/Katakana/Kanji). NEVER romanize.`;
+
+router.get("/realtime-token", async (req, res) => {
+  try {
+    const fromLang = (req.query.fromLang as string) || "en";
+    const toLang = (req.query.toLang as string) || "en";
+    const fromName = LANG_NAMES[fromLang] ?? fromLang;
+    const toName = LANG_NAMES[toLang] ?? toLang;
+
+    const instructions = `You are a real-time voice interpreter. The speaker is talking in ${fromName}.
+
+Your ONLY job: listen to what they say and immediately translate it into natural, spoken ${toName}.
+
+${SCRIPT_RULES}
+
+Rules:
+- Output ONLY the translation. Never add commentary, greetings, or explanations.
+- Use natural conversational ${toName} as a native speaker would say it.
+- Do NOT transliterate — use the actual ${toName} vocabulary.
+- Translate everything including questions, statements, and exclamations.`;
+
+    const session = await (openai.beta.realtime.sessions as any).create({
+      model: "gpt-4o-mini-realtime-preview",
+      voice: "alloy",
+      instructions,
+      modalities: ["text", "audio"],
+      input_audio_format: "pcm16",
+      output_audio_format: "pcm16",
+      input_audio_transcription: { model: "whisper-1" },
+      turn_detection: null,
+      temperature: 0.7,
+    });
+
+    res.json({ clientSecret: session.client_secret.value });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to create realtime session";
+    res.status(500).json({ error: message });
+  }
+});
+
 export default router;
