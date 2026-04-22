@@ -31,11 +31,11 @@ router.post("/transcribe", async (req, res) => {
       return;
     }
 
-    const { audioBase64, mimeType } = parse.data;
+    const { audioBase64, mimeType, language } = parse.data;
     const audioBuffer = Buffer.from(audioBase64, "base64");
 
     const { buffer, format } = await ensureCompatibleFormat(audioBuffer);
-    const text = await speechToText(buffer, format);
+    const text = await speechToText(buffer, format, language);
 
     res.json({ text });
   } catch (err) {
@@ -66,15 +66,24 @@ router.post("/translate", async (req, res) => {
 
 Translate the message from ${fromName} into natural, fluent ${toName} as a native speaker would actually say it.
 
-CRITICAL RULES:
-- Use real ${toName} words and vocabulary — NOT transliteration or phonetic spelling of the source words
-- Write in the native script of ${toName} (e.g. Devanagari for Hindi/Marathi, Latin for Spanish/German, etc.)
-- Never romanize, never write foreign words phonetically in ${toName} script
-- Convey the same meaning, intent and tone as the original
-- Return ONLY the translated sentence — no explanations, labels, punctuation additions, or quotation marks
+MANDATORY SCRIPT RULES — violating any of these is an error:
+- Hindi → MUST use Devanagari script (नमस्ते, आप कैसे हैं?). NEVER use Urdu/Arabic/Nastaliq script. Hindi and Urdu are different written languages.
+- Marathi → MUST use Devanagari script (नमस्कार, तुम्ही कसे आहात?). NEVER use Arabic script.
+- English → Latin alphabet only.
+- Spanish → Latin alphabet only.
+- German → Latin alphabet only.
+- Japanese → Japanese script (Hiragana/Katakana/Kanji as appropriate).
 
-Example (English → Hindi): "Hello, how are you?" → "नमस्ते, आप कैसे हैं?"
-Example (Hindi → English): "आप कहाँ से हैं?" → "Where are you from?"`,
+TRANSLATION RULES:
+- Use real ${toName} vocabulary — NOT phonetic transliteration of the source words
+- Never spell out foreign words phonetically in the target script
+- Convey the same meaning, intent and tone as the original
+- Return ONLY the final translated sentence — nothing else
+
+Examples:
+"Hello, how are you?" (English → Hindi) = "नमस्ते, आप कैसे हैं?"  ✓
+"Hello, how are you?" (English → Hindi) = "ہیلو، آپ کیسے ہیں؟"   ✗ WRONG SCRIPT
+"Hello, how are you?" (English → Hindi) = "हेलो, हाउ आर यू?"      ✗ TRANSLITERATION`,
         },
         {
           role: "user",

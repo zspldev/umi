@@ -172,17 +172,17 @@ export default function Session() {
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
           {lastTurn && lastTurn.speaker === 1 && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-              <p className={`text-xl font-medium leading-snug text-white/60 ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
+              <p dir="auto" className={`text-xl font-medium leading-snug text-white/60 ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.original}
               </p>
-              <p className={`text-3xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
+              <p dir="auto" className={`text-3xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>
           )}
           {lastTurn && lastTurn.speaker === 2 && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-               <p className={`text-3xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
+               <p dir="auto" className={`text-3xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>
@@ -207,17 +207,17 @@ export default function Session() {
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
           {lastTurn && lastTurn.speaker === 2 && (
              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-              <p className={`text-xl font-medium leading-snug text-secondary/60 ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
+              <p dir="auto" className={`text-xl font-medium leading-snug text-secondary/60 ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.original}
               </p>
-              <p className={`text-3xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
+              <p dir="auto" className={`text-3xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerOneLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>
           )}
           {lastTurn && lastTurn.speaker === 1 && (
              <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-4">
-              <p className={`text-3xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
+              <p dir="auto" className={`text-3xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerTwoLang) ? "font-devanagari" : ""}`}>
                 {lastTurn.translated}
               </p>
             </div>
