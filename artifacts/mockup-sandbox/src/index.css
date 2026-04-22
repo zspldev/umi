@@ -58,8 +58,8 @@
   --popover: 0 0% 100%;
   --popover-foreground: 220 50% 15%;
   
-  /* Rich Teal */
-  --primary: 175 70% 35%;
+  /* Golden Amber */
+  --primary: 38 92% 50%;
   --primary-foreground: 0 0% 100%;
   
   /* Deep Navy */
@@ -78,9 +78,9 @@
   
   --border: 210 20% 85%;
   --input: 210 20% 85%;
-  --ring: 175 70% 35%;
+  --ring: 38 92% 50%;
   
-  --chart-1: 175 70% 35%;
+  --chart-1: 38 92% 50%;
   --chart-2: 220 50% 25%;
   --chart-3: 35 90% 55%;
   --chart-4: 0 75% 55%;
@@ -88,12 +88,12 @@
   
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 220 50% 15%;
-  --sidebar-primary: 175 70% 35%;
+  --sidebar-primary: 38 92% 50%;
   --sidebar-primary-foreground: 0 0% 100%;
   --sidebar-accent: 210 20% 90%;
   --sidebar-accent-foreground: 220 50% 15%;
   --sidebar-border: 210 20% 85%;
-  --sidebar-ring: 175 70% 35%;
+  --sidebar-ring: 38 92% 50%;
 
   --font-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
