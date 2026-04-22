@@ -56,7 +56,7 @@ export default function SessionDetail() {
   };
 
   return (
-    <div className="min-h-[100dvh] w-full max-w-[390px] mx-auto bg-background flex flex-col font-sans">
+    <div className="h-[100dvh] w-full max-w-[390px] mx-auto bg-background flex flex-col font-sans overflow-hidden">
       <div className="bg-secondary text-white pt-14 pb-6 px-6 sticky top-0 z-10 shadow-sm">
         <div className="flex items-center justify-between mb-6">
           <Button 
@@ -82,7 +82,7 @@ export default function SessionDetail() {
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-6 pb-40">
+      <div className="flex-1 p-6 overflow-y-auto flex flex-col gap-6 pb-4">
         {session.turns.map((turn) => {
           const isSpeakerOne = turn.speaker === 1;
           const speakerName = isSpeakerOne ? session.speakerOneName : session.speakerTwoName;
@@ -106,7 +106,7 @@ export default function SessionDetail() {
         })}
       </div>
 
-      <div className="absolute bottom-0 w-full bg-white border-t border-muted/50 p-6 flex flex-col gap-3 z-20 pb-8">
+      <div className="flex-shrink-0 bg-white border-t border-muted/50 p-6 flex flex-col gap-3 pb-8">
         <Button onClick={handleExport} className="w-full h-12 rounded-xl bg-secondary hover:bg-secondary/90 text-white font-semibold" data-testid="button-export">
           <Download className="w-4 h-4 mr-2" />
           Export as Text
