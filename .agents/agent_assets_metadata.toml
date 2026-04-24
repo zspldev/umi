@@ -18,6 +18,18 @@ uri = "file://attached_assets/generated_images/umi-logo-transparent.png"
 type = "image"
 title = "umi-logo-transparent"
 
+[[generated]]
+id = "MSErVVWAuay_2d-onLGns"
+uri = "file://attached_assets/generated_images/umi-logo-original-white.png"
+type = "image"
+title = "umi-logo-original-white"
+
+[[generated]]
+id = "67hVqlicBltQyVq-SB82Z"
+uri = "file://attached_assets/generated_images/umi-logo-original-transparent.png"
+type = "image"
+title = "umi-logo-original-transparent"
+
 [[outputs]]
 id = "XSwgvMJK89UrJywad7Mtp"
 uri = "file://UMI_Improvements.md"
@@ -47,3 +59,15 @@ id = "odXSRP1re9p0xCY-RxZMM"
 uri = "file://attached_assets/generated_images/umi-logo-transparent.png"
 type = "image"
 title = "UMI Logo — Transparent Background"
+
+[[outputs]]
+id = "7tgN5J4RwTi42Pt26Udf_"
+uri = "file://attached_assets/generated_images/umi-logo-original-white.png"
+type = "image"
+title = "UMI Logo (Original) — White Background"
+
+[[outputs]]
+id = "2vknAQ6_Y3kEV-MCDibk1"
+uri = "file://attached_assets/generated_images/umi-logo-original-transparent.png"
+type = "image"
+title = "UMI Logo (Original) — Transparent Background"
