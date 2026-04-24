@@ -12,6 +12,7 @@ export default function Setup() {
   const [loc, setLocation] = useLocation();
   const { createSession } = useSessionStore();
   
+  const [sessionTitle, setSessionTitle] = useState('');
   const [s1Name, setS1Name] = useState('Speaker 1');
   const [s1Lang, setS1Lang] = useState('en');
   const [s2Name, setS2Name] = useState('Speaker 2');
@@ -19,6 +20,7 @@ export default function Setup() {
 
   const handleStart = () => {
     const id = createSession({
+      title: sessionTitle.trim() || undefined,
       speakerOneName: s1Name,
       speakerOneLang: s1Lang,
       speakerTwoName: s2Name,
@@ -41,6 +43,20 @@ export default function Setup() {
         </div>
 
         <div className="flex-1 flex flex-col gap-4">
+          <Card className="p-4 border-none shadow-md bg-white/80 backdrop-blur-xl rounded-2xl flex flex-col gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="session-title" className="text-xs font-medium text-secondary/80">Session Name <span className="text-secondary/40 font-normal">(optional)</span></Label>
+              <Input
+                id="session-title"
+                value={sessionTitle}
+                onChange={e => setSessionTitle(e.target.value)}
+                placeholder="e.g. Doctor visit, Meeting with Priya"
+                className="h-10 bg-white/50 text-sm"
+                data-testid="input-session-title"
+              />
+            </div>
+          </Card>
+
           <Card className="p-4 border-none shadow-md bg-white/80 backdrop-blur-xl rounded-2xl flex flex-col gap-3">
             <div className="flex items-center gap-3 border-b border-muted/50 pb-3">
               <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-sm">1</div>

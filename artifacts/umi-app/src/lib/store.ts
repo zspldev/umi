@@ -10,6 +10,7 @@ export interface UmiTurn {
 
 export interface UmiSession {
   id: string;
+  title?: string;
   createdAt: string;
   speakerOneName: string;
   speakerTwoName: string;

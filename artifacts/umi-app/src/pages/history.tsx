@@ -45,6 +45,7 @@ export default function History() {
         ) : (
           sessions.map(session => {
             const date = new Date(session.createdAt);
+            const displayTitle = session.title || `${session.speakerOneName} & ${session.speakerTwoName}`;
             return (
               <Card 
                 key={session.id} 
@@ -71,13 +72,14 @@ export default function History() {
                 </div>
 
                 <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-primary font-medium">
+                  <div className="flex items-center gap-2 text-primary font-medium text-sm">
                     <Globe className="w-4 h-4" />
                     {langMap[session.speakerOneLang]} → {langMap[session.speakerTwoLang]}
                   </div>
-                  <h3 className="text-lg font-bold text-secondary pr-10">
-                    {session.speakerOneName} & {session.speakerTwoName}
-                  </h3>
+                  <h3 className="text-lg font-bold text-secondary pr-10">{displayTitle}</h3>
+                  {session.title && (
+                    <p className="text-sm text-secondary/50">{session.speakerOneName} & {session.speakerTwoName}</p>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 pt-3 border-t border-muted/50">

@@ -34,6 +34,7 @@ export default function SessionDetail() {
   }
 
   const date = new Date(session.createdAt);
+  const displayTitle = session.title || `${session.speakerOneName} & ${session.speakerTwoName}`;
 
   const handleExport = () => {
     const text = session.turns.map(t => {
@@ -78,7 +79,10 @@ export default function SessionDetail() {
           <div className="inline-flex items-center px-3 py-1 rounded-full bg-white/10 text-white/90 text-sm font-semibold tracking-wide mb-2">
             {langMap[session.speakerOneLang]} → {langMap[session.speakerTwoLang]}
           </div>
-          <h1 className="text-2xl font-bold">{session.speakerOneName} & {session.speakerTwoName}</h1>
+          <h1 className="text-2xl font-bold">{displayTitle}</h1>
+          {session.title && (
+            <p className="text-sm text-white/60 mt-1">{session.speakerOneName} & {session.speakerTwoName}</p>
+          )}
         </div>
       </div>
 

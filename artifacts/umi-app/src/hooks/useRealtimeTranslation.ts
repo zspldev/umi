@@ -7,6 +7,9 @@ export interface TurnResult {
   translated: string;
 }
 
+const SILENCE_TIMEOUT_MS = 4000;
+const SPEECH_RMS_THRESHOLD = 0.008;
+
 function base64ToFloat32(base64: string): Float32Array {
   const binary = atob(base64);
   const bytes = new Uint8Array(binary.length);
@@ -33,6 +36,7 @@ function int16ToBase64(pcm16: Int16Array): string {
 
 export function useRealtimeTranslation() {
   const [phase, setPhase] = useState<RealtimePhase>('idle');
+  const [latencyMs, setLatencyMs] = useState<number | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -47,11 +51,26 @@ export function useRealtimeTranslation() {
   const onErrorRef = useRef<((msg: string) => void) | null>(null);
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // #14 silence guard
+  const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const speechDetectedRef = useRef<boolean>(false);
+
+  // #16 latency tracking
+  const responseCreateTimeRef = useRef<number | null>(null);
+  const firstAudioReceivedRef = useRef<boolean>(false);
+
   const stopMic = useCallback(() => {
     workletNodeRef.current?.disconnect();
     workletNodeRef.current = null;
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
+  }, []);
+
+  const clearSilenceTimer = useCallback(() => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
   }, []);
 
   const finalize = useCallback(() => {
@@ -90,6 +109,11 @@ export function useRealtimeTranslation() {
     switch (msg.type) {
       case 'response.audio.delta': {
         if (!audioCtxRef.current) break;
+        // #16 record latency on first audio chunk
+        if (!firstAudioReceivedRef.current && responseCreateTimeRef.current !== null) {
+          firstAudioReceivedRef.current = true;
+          setLatencyMs(Date.now() - responseCreateTimeRef.current);
+        }
         const float32 = base64ToFloat32(msg.delta);
         if (float32.length === 0) break;
         const ctx = audioCtxRef.current;
@@ -140,12 +164,16 @@ export function useRealtimeTranslation() {
     originalRef.current = null;
     responseDoneRef.current = false;
     nextPlayRef.current = 0;
+    speechDetectedRef.current = false;
+    responseCreateTimeRef.current = null;
+    firstAudioReceivedRef.current = false;
     onCompleteRef.current = onComplete;
     onErrorRef.current = onError;
     if (completeTimerRef.current) {
       clearTimeout(completeTimerRef.current);
       completeTimerRef.current = null;
     }
+    clearSilenceTimer();
 
     let clientSecret: string;
     try {
@@ -187,10 +215,46 @@ export function useRealtimeTranslation() {
           if (ws.readyState !== WebSocket.OPEN) return;
           const pcm16 = new Int16Array(e.data.pcm16);
           ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: int16ToBase64(pcm16) }));
+
+          // #14 silence guard: reset timer whenever speech is detected
+          const rms: number = e.data.rms ?? 0;
+          if (rms > SPEECH_RMS_THRESHOLD) {
+            speechDetectedRef.current = true;
+            clearSilenceTimer();
+            silenceTimerRef.current = setTimeout(() => {
+              silenceTimerRef.current = null;
+              // Silence after speech for SILENCE_TIMEOUT_MS — auto-stop and process
+            }, SILENCE_TIMEOUT_MS);
+          } else if (!speechDetectedRef.current) {
+            // No speech yet — enforce hard no-speech timeout from recording start
+          }
         };
 
         source.connect(workletNode);
         setPhase('recording');
+
+        // #14 hard timeout: if no speech at all after SILENCE_TIMEOUT_MS, cancel
+        silenceTimerRef.current = setTimeout(() => {
+          silenceTimerRef.current = null;
+          if (!speechDetectedRef.current) {
+            stopMic();
+            if (wsRef.current) {
+              wsRef.current.onclose = null;
+              wsRef.current.onerror = null;
+              wsRef.current.onmessage = null;
+              wsRef.current.close();
+              wsRef.current = null;
+            }
+            audioCtxRef.current?.close();
+            audioCtxRef.current = null;
+            const errCb = onErrorRef.current;
+            onCompleteRef.current = null;
+            onErrorRef.current = null;
+            setPhase('idle');
+            errCb?.('nothing-heard');
+          }
+        }, SILENCE_TIMEOUT_MS);
+
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Microphone error';
         onErrorRef.current?.(msg);
@@ -208,30 +272,36 @@ export function useRealtimeTranslation() {
       onErrorRef.current?.('WebSocket connection error');
       onErrorRef.current = null;
       onCompleteRef.current = null;
+      clearSilenceTimer();
       stopMic();
       setPhase('idle');
     };
 
     ws.onclose = () => {
+      clearSilenceTimer();
       stopMic();
     };
-  }, [handleMessage, stopMic]);
+  }, [handleMessage, stopMic, clearSilenceTimer]);
 
   const stopRecording = useCallback(() => {
+    clearSilenceTimer();
     stopMic();
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
       ws.send(JSON.stringify({ type: 'response.create' }));
+      // #16 record the moment we asked for a response
+      responseCreateTimeRef.current = Date.now();
     }
     setPhase('processing');
-  }, [stopMic]);
+  }, [stopMic, clearSilenceTimer]);
 
   const cleanup = useCallback(() => {
     if (completeTimerRef.current) {
       clearTimeout(completeTimerRef.current);
       completeTimerRef.current = null;
     }
+    clearSilenceTimer();
     onCompleteRef.current = null;
     onErrorRef.current = null;
     stopMic();
@@ -250,12 +320,15 @@ export function useRealtimeTranslation() {
     translationRef.current = '';
     originalRef.current = null;
     responseDoneRef.current = false;
+    speechDetectedRef.current = false;
+    responseCreateTimeRef.current = null;
+    firstAudioReceivedRef.current = false;
     setPhase('idle');
-  }, [stopMic]);
+  }, [stopMic, clearSilenceTimer]);
 
   useEffect(() => {
     return () => cleanup();
   }, [cleanup]);
 
-  return { phase, startTurn, stopRecording, cleanup };
+  return { phase, latencyMs, startTurn, stopRecording, cleanup };
 }

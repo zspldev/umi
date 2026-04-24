@@ -15,6 +15,43 @@ const langMap: Record<string, string> = {
   de: 'German'
 };
 
+function SignalBadge({ latencyMs }: { latencyMs: number | null }) {
+  const bars = 3;
+  let color = 'bg-white/30';
+  let filledBars = 0;
+  let label = '—';
+
+  if (latencyMs !== null) {
+    label = `${latencyMs}ms`;
+    if (latencyMs < 500) {
+      color = 'bg-emerald-400';
+      filledBars = 3;
+    } else if (latencyMs < 1000) {
+      color = 'bg-yellow-400';
+      filledBars = 2;
+    } else {
+      color = 'bg-red-400';
+      filledBars = 1;
+    }
+  }
+
+  return (
+    <div
+      className="flex items-end gap-[3px] cursor-default"
+      title={latencyMs !== null ? `Response latency: ${latencyMs}ms` : 'No latency data yet'}
+    >
+      {Array.from({ length: bars }).map((_, i) => (
+        <div
+          key={i}
+          className={`w-[4px] rounded-sm transition-colors duration-500 ${i < filledBars ? color : 'bg-white/25'}`}
+          style={{ height: `${8 + i * 4}px` }}
+        />
+      ))}
+      <span className="text-[10px] font-semibold text-white/70 ml-1 tabular-nums">{label}</span>
+    </div>
+  );
+}
+
 export default function Session() {
   const [, setLocation] = useLocation();
   const searchParams = new URLSearchParams(window.location.search);
@@ -26,7 +63,7 @@ export default function Session() {
   const [activeSpeaker, setActiveSpeaker] = useState<1 | 2>(1);
   const [lastTurn, setLastTurn] = useState<UmiTurn | null>(null);
 
-  const { phase, startTurn, stopRecording, cleanup } = useRealtimeTranslation();
+  const { phase, latencyMs, startTurn, stopRecording, cleanup } = useRealtimeTranslation();
   const isRecording = phase === 'recording';
   const isBusy = phase !== 'idle' && phase !== 'recording';
 
@@ -62,7 +99,16 @@ export default function Session() {
         setLastTurn(turn);
         setActiveSpeaker(activeSpeaker === 1 ? 2 : 1);
       },
-      (msg) => toast.error(msg),
+      (msg) => {
+        if (msg === 'nothing-heard') {
+          toast('Nothing heard — tap the mic to try again', {
+            icon: '🎙️',
+            duration: 3000,
+          });
+        } else {
+          toast.error(msg);
+        }
+      },
     );
   };
 
@@ -76,7 +122,8 @@ export default function Session() {
       <div className="absolute top-0 w-full z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/20 to-transparent">
         <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-semibold tracking-wide border border-white/10 flex items-center gap-2 shadow-sm">
           <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-          Live Session
+          Live
+          <SignalBadge latencyMs={latencyMs} />
         </div>
         <Button
           size="sm"
