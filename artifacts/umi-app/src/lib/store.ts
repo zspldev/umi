@@ -74,6 +74,11 @@ export function useSessionStore() {
     return sessions.find(s => s.id === id);
   }, [sessions]);
 
+  const updateSession = useCallback((id: string, patch: Partial<Omit<UmiSession, 'id' | 'createdAt' | 'turns'>>) => {
+    const updatedSessions = sessions.map(s => s.id === id ? { ...s, ...patch } : s);
+    saveSessions(updatedSessions);
+  }, [sessions, saveSessions]);
+
   const deleteSession = useCallback((id: string) => {
     saveSessions(sessions.filter(s => s.id !== id));
   }, [sessions, saveSessions]);
@@ -83,6 +88,7 @@ export function useSessionStore() {
     loaded,
     createSession,
     addTurn,
+    updateSession,
     getSession,
     deleteSession
   };
