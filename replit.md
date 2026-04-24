@@ -16,6 +16,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## GitHub Remote
+
+- **Remote**: `https://github.com/zspldev/umi` (origin)
+- **Auth**: HTTPS with `GITHUB_PERSONAL_ACCESS_TOKEN` secret (classic PAT, `ghp_` prefix, `repo` scope)
+- **Push**: `git push origin main` — remote URL embeds the token as the password (`oauth2:<token>@github.com/...`)
+- **Note**: Replit's built-in `replit-git-askpass` helper intercepts HTTPS git auth; override with `GIT_ASKPASS=/tmp/askpass.sh git -c credential.helper= push origin main` if needed from a script context
+- **Security**: never print or log the remote URL — it contains the token. Use `git remote get-url origin | sed 's/oauth2:[^@]*/oauth2:REDACTED/g'` if you need to display it
+- **Last pushed**: all commits up to `7766812` (Task #2) confirmed on GitHub
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
