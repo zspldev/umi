@@ -30,6 +30,18 @@ uri = "file://attached_assets/generated_images/umi-logo-original-transparent.png
 type = "image"
 title = "umi-logo-original-transparent"
 
+[[generated]]
+id = "5JyUoxtg6g8v7HyJmc_0I"
+uri = "file://attached_assets/generated_images/xlango-wordmark-1.png"
+type = "image"
+title = "xlango-wordmark-minimal"
+
+[[generated]]
+id = "lFRcGt45pIsCaBgiCr_l2"
+uri = "file://attached_assets/generated_images/xlango-wordmark-2.png"
+type = "image"
+title = "xlango-wordmark-expressive"
+
 [[outputs]]
 id = "XSwgvMJK89UrJywad7Mtp"
 uri = "file://UMI_Improvements.md"
@@ -71,3 +83,15 @@ id = "2vknAQ6_Y3kEV-MCDibk1"
 uri = "file://attached_assets/generated_images/umi-logo-original-transparent.png"
 type = "image"
 title = "UMI Logo (Original) — Transparent Background"
+
+[[outputs]]
+id = "OB5QA1zQMcJlP8SXFpvaI"
+uri = "file://attached_assets/generated_images/xlango-wordmark-1.png"
+type = "image"
+title = "XLango Wordmark — Design 1 (Minimal, Two-Tone)"
+
+[[outputs]]
+id = "K2RPyUqCL_x3FaTJoAmOc"
+uri = "file://attached_assets/generated_images/xlango-wordmark-2.png"
+type = "image"
+title = "XLango Wordmark — Design 2 (Expressive, Speech-Wave X)"
