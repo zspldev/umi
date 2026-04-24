@@ -227,14 +227,35 @@ export function useRealtimeTranslation() {
     setPhase('processing');
   }, [stopMic]);
 
-  useEffect(() => {
-    return () => {
-      if (completeTimerRef.current) clearTimeout(completeTimerRef.current);
-      stopMic();
-      wsRef.current?.close();
-      audioCtxRef.current?.close();
-    };
+  const cleanup = useCallback(() => {
+    if (completeTimerRef.current) {
+      clearTimeout(completeTimerRef.current);
+      completeTimerRef.current = null;
+    }
+    onCompleteRef.current = null;
+    onErrorRef.current = null;
+    stopMic();
+    if (wsRef.current) {
+      wsRef.current.onclose = null;
+      wsRef.current.onerror = null;
+      wsRef.current.onmessage = null;
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+    if (audioCtxRef.current) {
+      audioCtxRef.current.close();
+      audioCtxRef.current = null;
+    }
+    nextPlayRef.current = 0;
+    translationRef.current = '';
+    originalRef.current = null;
+    responseDoneRef.current = false;
+    setPhase('idle');
   }, [stopMic]);
 
-  return { phase, startTurn, stopRecording };
+  useEffect(() => {
+    return () => cleanup();
+  }, [cleanup]);
+
+  return { phase, startTurn, stopRecording, cleanup };
 }

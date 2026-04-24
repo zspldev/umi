@@ -26,7 +26,7 @@ export default function Session() {
   const [activeSpeaker, setActiveSpeaker] = useState<1 | 2>(1);
   const [lastTurn, setLastTurn] = useState<UmiTurn | null>(null);
 
-  const { phase, startTurn, stopRecording } = useRealtimeTranslation();
+  const { phase, startTurn, stopRecording, cleanup } = useRealtimeTranslation();
   const isRecording = phase === 'recording';
   const isBusy = phase !== 'idle' && phase !== 'recording';
 
@@ -81,7 +81,7 @@ export default function Session() {
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => setLocation(`/history/${session.id}`)}
+          onClick={() => { cleanup(); setLocation(`/history/${session.id}`); }}
           className="text-white hover:bg-white/20 rounded-full h-9 px-4 font-medium backdrop-blur-md bg-white/10 border border-white/10"
           data-testid="button-end-session"
         >
