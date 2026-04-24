@@ -82,6 +82,8 @@ export default function Session() {
 
   const { getSession, addTurn, updateSession, loaded } = useSessionStore();
   const session = sessionId ? getSession(sessionId) : null;
+  const speakerGender = (spk: 1 | 2) =>
+    spk === 1 ? (session?.speakerOneGender ?? 'unspecified') : (session?.speakerTwoGender ?? 'unspecified');
 
   const [activeSpeaker, setActiveSpeaker] = useState<1 | 2>(1);
   const [lastTurn, setLastTurn] = useState<UmiTurn | null>(null);
@@ -142,6 +144,7 @@ export default function Session() {
           toast.error(msg);
         }
       },
+      speakerGender(activeSpeaker),
     );
   };
 

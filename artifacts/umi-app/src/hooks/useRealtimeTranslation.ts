@@ -165,6 +165,7 @@ export function useRealtimeTranslation() {
     toLang: string,
     onComplete: (r: TurnResult) => void,
     onError: (msg: string) => void,
+    speakerGender?: string,
   ) => {
     setPhase('connecting');
     setCanReplay(false);
@@ -186,7 +187,8 @@ export function useRealtimeTranslation() {
 
     let clientSecret: string;
     try {
-      const res = await fetch(`/api/umi/realtime-token?fromLang=${fromLang}&toLang=${toLang}`);
+      const genderParam = speakerGender && speakerGender !== 'unspecified' ? `&gender=${speakerGender}` : '';
+      const res = await fetch(`/api/umi/realtime-token?fromLang=${fromLang}&toLang=${toLang}${genderParam}`);
       if (!res.ok) throw new Error(`Token fetch failed: ${res.status}`);
       const body = await res.json();
       clientSecret = body.clientSecret;

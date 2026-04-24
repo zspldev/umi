@@ -8,6 +8,8 @@ export interface UmiTurn {
   timestamp: string;
 }
 
+export type SpeakerGender = 'male' | 'female' | 'unspecified';
+
 export interface UmiSession {
   id: string;
   title?: string;
@@ -16,6 +18,8 @@ export interface UmiSession {
   speakerTwoName: string;
   speakerOneLang: string;
   speakerTwoLang: string;
+  speakerOneGender?: SpeakerGender;
+  speakerTwoGender?: SpeakerGender;
   turns: UmiTurn[];
 }
 

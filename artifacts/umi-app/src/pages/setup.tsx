@@ -6,7 +6,36 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { Globe2, History, ArrowRight } from 'lucide-react';
-import { useSessionStore } from '@/lib/store';
+import { useSessionStore, SpeakerGender } from '@/lib/store';
+
+const GENDERS: { value: SpeakerGender; label: string }[] = [
+  { value: 'male',        label: 'Male'   },
+  { value: 'female',      label: 'Female' },
+  { value: 'unspecified', label: '—'      },
+];
+
+function GenderToggle({ value, onChange, accent }: { value: SpeakerGender; onChange: (v: SpeakerGender) => void; accent: 'primary' | 'secondary' }) {
+  return (
+    <div className="flex gap-1.5">
+      {GENDERS.map(g => (
+        <button
+          key={g.value}
+          type="button"
+          onClick={() => onChange(g.value)}
+          className={`flex-1 h-8 rounded-lg text-xs font-semibold transition-colors
+            ${value === g.value
+              ? accent === 'primary'
+                ? 'bg-primary text-white shadow-sm'
+                : 'bg-secondary text-white shadow-sm'
+              : 'bg-white/60 text-secondary/60 hover:bg-white/80 hover:text-secondary/80'
+            }`}
+        >
+          {g.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export default function Setup() {
   const [loc, setLocation] = useLocation();
@@ -15,16 +44,20 @@ export default function Setup() {
   const [sessionTitle, setSessionTitle] = useState('');
   const [s1Name, setS1Name] = useState('Speaker 1');
   const [s1Lang, setS1Lang] = useState('en');
+  const [s1Gender, setS1Gender] = useState<SpeakerGender>('unspecified');
   const [s2Name, setS2Name] = useState('Speaker 2');
   const [s2Lang, setS2Lang] = useState('hi');
+  const [s2Gender, setS2Gender] = useState<SpeakerGender>('unspecified');
 
   const handleStart = () => {
     const id = createSession({
       title: sessionTitle.trim() || undefined,
       speakerOneName: s1Name,
       speakerOneLang: s1Lang,
+      speakerOneGender: s1Gender,
       speakerTwoName: s2Name,
-      speakerTwoLang: s2Lang
+      speakerTwoLang: s2Lang,
+      speakerTwoGender: s2Gender,
     });
     setLocation(`/session?id=${id}`);
   };
@@ -89,6 +122,11 @@ export default function Setup() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-secondary/80">Gender <span className="text-secondary/40 font-normal">(for grammar)</span></Label>
+                <GenderToggle value={s1Gender} onChange={setS1Gender} accent="primary" />
+              </div>
             </div>
           </Card>
 
@@ -126,6 +164,11 @@ export default function Setup() {
                     <SelectItem value="de">German (Deutsch)</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-medium text-secondary/80">Gender <span className="text-secondary/40 font-normal">(for grammar)</span></Label>
+                <GenderToggle value={s2Gender} onChange={setS2Gender} accent="secondary" />
               </div>
             </div>
           </Card>

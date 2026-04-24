@@ -131,10 +131,17 @@ router.get("/realtime-token", async (req, res) => {
   try {
     const fromLang = (req.query.fromLang as string) || "en";
     const toLang = (req.query.toLang as string) || "en";
+    const gender = (req.query.gender as string) || "";
     const toName = LANG_NAMES[toLang] ?? toLang;
 
+    const genderInstruction = gender === "male"
+      ? "\nThe speaker is male. Use masculine grammatical forms in the translation where the target language requires gender agreement (e.g. Hindi/Marathi verb endings and adjectives, Spanish/German adjective and participle agreement)."
+      : gender === "female"
+      ? "\nThe speaker is female. Use feminine grammatical forms in the translation where the target language requires gender agreement (e.g. Hindi/Marathi verb endings and adjectives, Spanish/German adjective and participle agreement)."
+      : "";
+
     const instructions = fromLang === "auto"
-      ? `You are a real-time voice interpreter. Listen to the speaker and automatically detect what language they are speaking, then immediately translate their words into natural, spoken ${toName}.
+      ? `You are a real-time voice interpreter. Listen to the speaker and automatically detect what language they are speaking, then immediately translate their words into natural, spoken ${toName}.${genderInstruction}
 
 ${SCRIPT_RULES}
 
@@ -143,7 +150,7 @@ Rules:
 - Use natural conversational ${toName} as a native speaker would say it.
 - Do NOT transliterate — use the actual ${toName} vocabulary.
 - Translate everything including questions, statements, and exclamations.`
-      : `You are a real-time voice interpreter. The speaker is talking in ${LANG_NAMES[fromLang] ?? fromLang}.
+      : `You are a real-time voice interpreter. The speaker is talking in ${LANG_NAMES[fromLang] ?? fromLang}.${genderInstruction}
 
 Your ONLY job: listen to what they say and immediately translate it into natural, spoken ${toName}.
 
