@@ -42,6 +42,24 @@ uri = "file://attached_assets/generated_images/xlango-wordmark-2.png"
 type = "image"
 title = "xlango-wordmark-expressive"
 
+[[generated]]
+id = "t2D9FWCqaJj0asGpDBpi2"
+uri = "file://attached_assets/generated_images/xlango-v2-amber-navy.png"
+type = "image"
+title = "xlango-v2-amber-navy"
+
+[[generated]]
+id = "LJmJJ6M55T8wELJEx1L7Q"
+uri = "file://attached_assets/generated_images/xlango-v2-teal-navy.png"
+type = "image"
+title = "xlango-v2-teal-navy"
+
+[[generated]]
+id = "uJ5RPZky_6yXp-aA8Rn84"
+uri = "file://attached_assets/generated_images/xlango-v2-navy-amber.png"
+type = "image"
+title = "xlango-v2-navy-amber"
+
 [[outputs]]
 id = "XSwgvMJK89UrJywad7Mtp"
 uri = "file://UMI_Improvements.md"
@@ -95,3 +113,21 @@ id = "K2RPyUqCL_x3FaTJoAmOc"
 uri = "file://attached_assets/generated_images/xlango-wordmark-2.png"
 type = "image"
 title = "XLango Wordmark — Design 2 (Expressive, Speech-Wave X)"
+
+[[outputs]]
+id = "hE1ltZlNi3fbOTPVhQQiP"
+uri = "file://attached_assets/generated_images/xlango-v2-amber-navy.png"
+type = "image"
+title = "XLango — Amber X + Navy Lango"
+
+[[outputs]]
+id = "jdg6OO9LHFqRsH8yj77_h"
+uri = "file://attached_assets/generated_images/xlango-v2-teal-navy.png"
+type = "image"
+title = "XLango — Teal X + Navy Lango"
+
+[[outputs]]
+id = "QWhgn3b0GetSpOIwtFyia"
+uri = "file://attached_assets/generated_images/xlango-v2-navy-amber.png"
+type = "image"
+title = "XLango — Navy X + Amber Lango"
