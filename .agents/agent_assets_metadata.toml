@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "61iGYFwLCKOVGu54FXLn9"
+uri = "file://attached_assets/generated_images/umi-logo.png"
+type = "image"
+title = "umi-logo"
 
 [[outputs]]
 id = "XSwgvMJK89UrJywad7Mtp"
@@ -12,3 +17,9 @@ id = "Cj2GYMIDoOzDLS4zJTutG"
 uri = "file://UMI Improvements.md"
 type = "text"
 title = "UMI Improvements.md"
+
+[[outputs]]
+id = "gTfN7Nco1qkAYfZcGPSRl"
+uri = "file://attached_assets/generated_images/umi-logo.png"
+type = "image"
+title = "UMI Logo"
