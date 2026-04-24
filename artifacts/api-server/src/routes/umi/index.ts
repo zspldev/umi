@@ -131,10 +131,19 @@ router.get("/realtime-token", async (req, res) => {
   try {
     const fromLang = (req.query.fromLang as string) || "en";
     const toLang = (req.query.toLang as string) || "en";
-    const fromName = LANG_NAMES[fromLang] ?? fromLang;
     const toName = LANG_NAMES[toLang] ?? toLang;
 
-    const instructions = `You are a real-time voice interpreter. The speaker is talking in ${fromName}.
+    const instructions = fromLang === "auto"
+      ? `You are a real-time voice interpreter. Listen to the speaker and automatically detect what language they are speaking, then immediately translate their words into natural, spoken ${toName}.
+
+${SCRIPT_RULES}
+
+Rules:
+- Output ONLY the translation. Never add commentary, greetings, or explanations.
+- Use natural conversational ${toName} as a native speaker would say it.
+- Do NOT transliterate — use the actual ${toName} vocabulary.
+- Translate everything including questions, statements, and exclamations.`
+      : `You are a real-time voice interpreter. The speaker is talking in ${LANG_NAMES[fromLang] ?? fromLang}.
 
 Your ONLY job: listen to what they say and immediately translate it into natural, spoken ${toName}.
 

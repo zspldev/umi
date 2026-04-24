@@ -37,6 +37,7 @@ function int16ToBase64(pcm16: Int16Array): string {
 export function useRealtimeTranslation() {
   const [phase, setPhase] = useState<RealtimePhase>('idle');
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
+  const [canReplay, setCanReplay] = useState(false);
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -58,6 +59,9 @@ export function useRealtimeTranslation() {
   // #16 latency tracking
   const responseCreateTimeRef = useRef<number | null>(null);
   const firstAudioReceivedRef = useRef<boolean>(false);
+
+  // #5 replay: accumulate all audio chunks for the current turn
+  const audioChunksRef = useRef<Float32Array[]>([]);
 
   const stopMic = useCallback(() => {
     workletNodeRef.current?.disconnect();
@@ -83,6 +87,7 @@ export function useRealtimeTranslation() {
     const translated = translationRef.current;
     onCompleteRef.current = null;
     onErrorRef.current = null;
+    setCanReplay(audioChunksRef.current.length > 0);
     setPhase('idle');
     cb?.({ original, translated });
   }, []);
@@ -116,6 +121,8 @@ export function useRealtimeTranslation() {
         }
         const float32 = base64ToFloat32(msg.delta);
         if (float32.length === 0) break;
+        // #5 store for replay
+        audioChunksRef.current.push(float32);
         const ctx = audioCtxRef.current;
         const buf = ctx.createBuffer(1, float32.length, 24000);
         buf.copyToChannel(float32, 0);
@@ -160,6 +167,7 @@ export function useRealtimeTranslation() {
     onError: (msg: string) => void,
   ) => {
     setPhase('connecting');
+    setCanReplay(false);
     translationRef.current = '';
     originalRef.current = null;
     responseDoneRef.current = false;
@@ -167,6 +175,7 @@ export function useRealtimeTranslation() {
     speechDetectedRef.current = false;
     responseCreateTimeRef.current = null;
     firstAudioReceivedRef.current = false;
+    audioChunksRef.current = [];
     onCompleteRef.current = onComplete;
     onErrorRef.current = onError;
     if (completeTimerRef.current) {
@@ -223,10 +232,7 @@ export function useRealtimeTranslation() {
             clearSilenceTimer();
             silenceTimerRef.current = setTimeout(() => {
               silenceTimerRef.current = null;
-              // Silence after speech for SILENCE_TIMEOUT_MS — auto-stop and process
             }, SILENCE_TIMEOUT_MS);
-          } else if (!speechDetectedRef.current) {
-            // No speech yet — enforce hard no-speech timeout from recording start
           }
         };
 
@@ -296,6 +302,29 @@ export function useRealtimeTranslation() {
     setPhase('processing');
   }, [stopMic, clearSilenceTimer]);
 
+  // #5 replay: create a fresh AudioContext, play all stored chunks, then close it
+  const replayAudio = useCallback(() => {
+    const chunks = audioChunksRef.current;
+    if (chunks.length === 0) return;
+
+    const totalLength = chunks.reduce((sum, c) => sum + c.length, 0);
+    const combined = new Float32Array(totalLength);
+    let offset = 0;
+    for (const chunk of chunks) {
+      combined.set(chunk, offset);
+      offset += chunk.length;
+    }
+
+    const ctx = new AudioContext({ sampleRate: 24000 });
+    const buffer = ctx.createBuffer(1, combined.length, 24000);
+    buffer.copyToChannel(combined, 0);
+    const src = ctx.createBufferSource();
+    src.buffer = buffer;
+    src.connect(ctx.destination);
+    src.onended = () => ctx.close();
+    src.start(ctx.currentTime + 0.05);
+  }, []);
+
   const cleanup = useCallback(() => {
     if (completeTimerRef.current) {
       clearTimeout(completeTimerRef.current);
@@ -323,6 +352,8 @@ export function useRealtimeTranslation() {
     speechDetectedRef.current = false;
     responseCreateTimeRef.current = null;
     firstAudioReceivedRef.current = false;
+    audioChunksRef.current = [];
+    setCanReplay(false);
     setPhase('idle');
   }, [stopMic, clearSilenceTimer]);
 
@@ -330,5 +361,5 @@ export function useRealtimeTranslation() {
     return () => cleanup();
   }, [cleanup]);
 
-  return { phase, latencyMs, startTurn, stopRecording, cleanup };
+  return { phase, latencyMs, canReplay, replayAudio, startTurn, stopRecording, cleanup };
 }

@@ -82,6 +82,7 @@ export default function Setup() {
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="auto">Auto (Detect)</SelectItem>
                     <SelectItem value="en">English</SelectItem>
                     <SelectItem value="hi">Hindi (हिंदी)</SelectItem>
                     <SelectItem value="mr">Marathi (मराठी)</SelectItem>
@@ -116,6 +117,7 @@ export default function Setup() {
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="auto">Auto (Detect)</SelectItem>
                     <SelectItem value="en">English</SelectItem>
                     <SelectItem value="hi">Hindi (हिंदी)</SelectItem>
                     <SelectItem value="mr">Marathi (मराठी)</SelectItem>

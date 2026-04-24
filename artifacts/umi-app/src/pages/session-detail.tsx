@@ -5,6 +5,7 @@ import { useSessionStore } from '@/lib/store';
 import { format } from 'date-fns';
 
 const langMap: Record<string, string> = {
+  auto: 'Auto',
   en: 'English',
   hi: 'Hindi',
   mr: 'Marathi',

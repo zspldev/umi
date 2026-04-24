@@ -1,12 +1,13 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Mic, X, Loader2, ArrowRightLeft, Square, Volume2 } from 'lucide-react';
+import { Mic, X, Loader2, ArrowRightLeft, Square, Volume2, RotateCcw } from 'lucide-react';
 import { useSessionStore, UmiTurn } from '@/lib/store';
-import { useRealtimeTranslation } from '@/hooks/useRealtimeTranslation';
+import { useRealtimeTranslation, RealtimePhase } from '@/hooks/useRealtimeTranslation';
 import { toast } from 'sonner';
 
 const langMap: Record<string, string> = {
+  auto: 'Auto',
   en: 'English',
   hi: 'Hindi',
   mr: 'Marathi',
@@ -62,8 +63,11 @@ export default function Session() {
 
   const [activeSpeaker, setActiveSpeaker] = useState<1 | 2>(1);
   const [lastTurn, setLastTurn] = useState<UmiTurn | null>(null);
+  // #9 nudge state
+  const [nudge, setNudge] = useState(false);
+  const prevLastTurnIdRef = useRef<string | null>(null);
 
-  const { phase, latencyMs, startTurn, stopRecording, cleanup } = useRealtimeTranslation();
+  const { phase, latencyMs, canReplay, replayAudio, startTurn, stopRecording, cleanup } = useRealtimeTranslation();
   const isRecording = phase === 'recording';
   const isBusy = phase !== 'idle' && phase !== 'recording';
 
@@ -75,6 +79,17 @@ export default function Session() {
       setLastTurn(session.turns[session.turns.length - 1]);
     }
   }, [loaded, session, setLocation]);
+
+  // #9 fire nudge whenever a new turn lands
+  useEffect(() => {
+    if (!lastTurn) return;
+    if (lastTurn.id === prevLastTurnIdRef.current) return;
+    prevLastTurnIdRef.current = lastTurn.id;
+    setNudge(true);
+    navigator.vibrate?.([100, 50, 100]);
+    const t = setTimeout(() => setNudge(false), 2000);
+    return () => clearTimeout(t);
+  }, [lastTurn]);
 
   if (!loaded) return null;
   if (!session) return null;
@@ -116,6 +131,11 @@ export default function Session() {
   const isProcessing = phase === 'processing';
   const isPlaying = phase === 'playing';
 
+  // #9 nudge ring: targets the panel of whoever is now waiting (the new active speaker)
+  const nudgeRingClass = nudge
+    ? 'ring-4 ring-inset ring-primary/60 transition-all duration-300'
+    : '';
+
   return (
     <div className="h-[100dvh] w-full max-w-[390px] mx-auto bg-background flex flex-col font-sans relative overflow-hidden">
 
@@ -139,7 +159,7 @@ export default function Session() {
 
       {/* Speaker 1 panel (navy, top) */}
       <div
-        className="flex-1 bg-secondary text-white p-4 pt-16 flex flex-col relative pb-4 transition-colors duration-500"
+        className={`flex-1 bg-secondary text-white p-4 pt-16 flex flex-col relative pb-4 transition-all duration-500 ${isSpeaker1Active && nudge ? nudgeRingClass : ''}`}
         style={{ opacity: isSpeaker1Active ? 1 : 0.5 }}
       >
         <div
@@ -154,15 +174,30 @@ export default function Session() {
 
         <div className="flex justify-between items-center mb-2">
           <div className="flex flex-col">
-            <span className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-0.5">Speaker 1 • {langMap[session.speakerOneLang]}</span>
+            <span className="text-white/60 text-xs font-semibold uppercase tracking-wider mb-0.5">
+              Speaker 1 • {langMap[session.speakerOneLang] ?? session.speakerOneLang}
+            </span>
             <span className="text-base font-bold text-white">{session.speakerOneName}</span>
           </div>
-          {isSpeaker1Active && (isProcessing || isPlaying) && (
-            <div className="px-3 py-1 bg-white/10 rounded-full text-white/90 text-sm font-medium flex items-center gap-2">
-              {isPlaying ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {isPlaying ? 'Playing…' : 'Processing…'}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {isSpeaker1Active && (isProcessing || isPlaying) && (
+              <div className="px-3 py-1 bg-white/10 rounded-full text-white/90 text-sm font-medium flex items-center gap-2">
+                {isPlaying ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {isPlaying ? 'Playing…' : 'Processing…'}
+              </div>
+            )}
+            {/* #5 replay: show after speaker 1's turn, while idle */}
+            {!isSpeaker1Active && phase === 'idle' && canReplay && lastTurn?.speaker === 1 && (
+              <button
+                onClick={replayAudio}
+                className="w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center transition-colors"
+                title="Replay translation"
+                data-testid="button-replay-s1"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-white/80" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
@@ -188,20 +223,35 @@ export default function Session() {
 
       {/* Speaker 2 panel (light, bottom) */}
       <div
-        className="flex-1 bg-[#F8F9FA] text-secondary p-4 pt-8 flex flex-col relative pb-20 transition-colors duration-500"
+        className={`flex-1 bg-[#F8F9FA] text-secondary p-4 pt-8 flex flex-col relative pb-20 transition-all duration-500 ${!isSpeaker1Active && nudge ? 'ring-4 ring-inset ring-primary/40' : ''}`}
         style={{ opacity: !isSpeaker1Active ? 1 : 0.5 }}
       >
         <div className="flex justify-between items-center mb-2">
           <div className="flex flex-col">
-            <span className="text-secondary/50 text-xs font-semibold uppercase tracking-wider mb-0.5">Speaker 2 • {langMap[session.speakerTwoLang]}</span>
+            <span className="text-secondary/50 text-xs font-semibold uppercase tracking-wider mb-0.5">
+              Speaker 2 • {langMap[session.speakerTwoLang] ?? session.speakerTwoLang}
+            </span>
             <span className="text-base font-bold text-secondary">{session.speakerTwoName}</span>
           </div>
-          {!isSpeaker1Active && (isProcessing || isPlaying) && (
-            <div className="px-3 py-1 bg-secondary/5 rounded-full text-secondary/70 text-sm font-medium flex items-center gap-1.5">
-              {isPlaying ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              {isPlaying ? 'Playing…' : 'Processing…'}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {!isSpeaker1Active && (isProcessing || isPlaying) && (
+              <div className="px-3 py-1 bg-secondary/5 rounded-full text-secondary/70 text-sm font-medium flex items-center gap-1.5">
+                {isPlaying ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {isPlaying ? 'Playing…' : 'Processing…'}
+              </div>
+            )}
+            {/* #5 replay: show after speaker 2's turn, while idle */}
+            {isSpeaker1Active && phase === 'idle' && canReplay && lastTurn?.speaker === 2 && (
+              <button
+                onClick={replayAudio}
+                className="w-8 h-8 rounded-full bg-secondary/10 hover:bg-secondary/15 flex items-center justify-center transition-colors"
+                title="Replay translation"
+                data-testid="button-replay-s2"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-secondary/60" />
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
