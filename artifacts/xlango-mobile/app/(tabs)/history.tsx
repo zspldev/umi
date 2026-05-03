@@ -109,7 +109,6 @@ function SessionRow({ session, onDelete }: { session: Session; onDelete: () => v
             fontSize: 12,
             fontFamily: "PlusJakartaSans_400Regular",
             color: colors.mutedForeground,
-            marginLeft: "auto" as any,
           }}
         >
           {formatDate(session.startedAt)}
