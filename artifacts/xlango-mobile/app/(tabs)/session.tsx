@@ -147,14 +147,28 @@ export default function SessionScreen() {
           webRecorderRef.current = mr;
         } else {
           if (!permissionGranted) return;
+
+          // Unload any playing sound so the audio session is free
+          if (soundRef.current) {
+            await soundRef.current.unloadAsync().catch(() => {});
+            soundRef.current = null;
+          }
+
+          // Switch audio session to recording mode
           await Audio.setAudioModeAsync({
             allowsRecordingIOS: true,
             playsInSilentModeIOS: true,
           });
-          const { recording } = await Audio.Recording.createAsync(
-            RECORDING_OPTIONS
-          );
+
+          // Give iOS a moment to reconfigure the audio session
+          await new Promise<void>((r) => setTimeout(r, 80));
+
+          // Step-by-step recording init (more reliable than createAsync)
+          const recording = new Audio.Recording();
+          await recording.prepareToRecordAsync(RECORDING_OPTIONS);
+          await recording.startAsync();
           recordingRef.current = recording;
+
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
 
@@ -163,7 +177,8 @@ export default function SessionScreen() {
         setPhase("recording");
       } catch (err) {
         console.error("Start recording error:", err);
-        setPhase("idle");
+        setPhase("error");
+        setTimeout(() => setPhase("idle"), 2000);
       }
     },
     [permissionGranted]
