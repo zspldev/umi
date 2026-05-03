@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/xlango-mobile/"
+title = "XLango Mobile"
+version = "1.0.0"
+id = "artifacts/xlango-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/xlango-mobile/" ]
+localPort = 22296
+
+[services.development]
+run = "pnpm --filter @workspace/xlango-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/xlango-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/xlango-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "22296"
+BASE_PATH = "/xlango-mobile/"
