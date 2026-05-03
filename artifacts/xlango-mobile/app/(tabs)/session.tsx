@@ -11,7 +11,6 @@ import {
   Text,
   TouchableOpacity,
   View,
-  ScrollView,
 } from "react-native";
 import Animated, {
   useAnimatedStyle,
@@ -45,10 +44,7 @@ const RECORDING_OPTIONS: Audio.RecordingOptions = {
     linearPCMIsBigEndian: false,
     linearPCMIsFloat: false,
   },
-  web: {
-    mimeType: "audio/webm",
-    bitsPerSecond: 128000,
-  },
+  web: { mimeType: "audio/webm", bitsPerSecond: 128000 },
 };
 
 function apiUrl(path: string) {
@@ -60,7 +56,26 @@ function makeId() {
   return Date.now().toString() + Math.random().toString(36).slice(2, 9);
 }
 
-type StatusPhase = "idle" | "recording" | "transcribing" | "translating" | "speaking" | "error";
+// Convert a Blob to base64 string (web only)
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.split(",")[1]);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+type StatusPhase =
+  | "idle"
+  | "recording"
+  | "transcribing"
+  | "translating"
+  | "speaking"
+  | "error";
 
 export default function SessionScreen() {
   const colors = useColors();
@@ -69,35 +84,44 @@ export default function SessionScreen() {
 
   const sessionId = useRef(makeId());
   const sessionStart = useRef(Date.now());
+
+  // Native recording
   const recordingRef = useRef<Audio.Recording | null>(null);
-  const activeSpeakerRef = useRef<0 | 1 | null>(null);
   const soundRef = useRef<Audio.Sound | null>(null);
+
+  // Web recording
+  const webRecorderRef = useRef<MediaRecorder | null>(null);
+  const webChunksRef = useRef<BlobPart[]>([]);
+  const webStreamRef = useRef<MediaStream | null>(null);
+
+  const activeSpeakerRef = useRef<0 | 1 | null>(null);
 
   const [turns, setTurns] = useState<Turn[]>([]);
   const [recordingSpeaker, setRecordingSpeaker] = useState<0 | 1 | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [phase, setPhase] = useState<StatusPhase>("idle");
-  const [permissionGranted, setPermissionGranted] = useState(false);
+  const [permissionGranted, setPermissionGranted] = useState(
+    Platform.OS === "web"
+  );
 
   const statusOpacity = useSharedValue(0);
-  const statusAnimStyle = useAnimatedStyle(() => ({ opacity: statusOpacity.value }));
+  const statusAnimStyle = useAnimatedStyle(() => ({
+    opacity: statusOpacity.value,
+  }));
 
+  // Request native microphone permission on mount
   useEffect(() => {
-    (async () => {
-      if (Platform.OS === "web") {
-        setPermissionGranted(true);
-        return;
-      }
-      const { status } = await Audio.requestPermissionsAsync();
+    if (Platform.OS === "web") return;
+    Audio.requestPermissionsAsync().then(({ status }) => {
       setPermissionGranted(status === "granted");
       if (status !== "granted") {
         Alert.alert(
           "Microphone Required",
-          "XLango needs microphone access to interpret speech. Please enable it in Settings.",
+          "XLango needs microphone access. Please enable it in Settings.",
           [{ text: "OK", onPress: () => router.back() }]
         );
       }
-    })();
+    });
 
     return () => {
       soundRef.current?.unloadAsync().catch(() => {});
@@ -106,41 +130,64 @@ export default function SessionScreen() {
   }, []);
 
   useEffect(() => {
-    if (phase !== "idle") {
-      statusOpacity.value = withTiming(1, { duration: 200 });
-    } else {
-      statusOpacity.value = withTiming(0, { duration: 300 });
-    }
+    statusOpacity.value = withTiming(phase !== "idle" ? 1 : 0, {
+      duration: phase !== "idle" ? 200 : 300,
+    });
   }, [phase]);
 
+  // ─── Start recording ───────────────────────────────────────────────────────
   const handleMicPressIn = useCallback(
     async (speakerIdx: 0 | 1) => {
-      if (isProcessing || !permissionGranted || Platform.OS === "web") return;
+      if (isProcessing) return;
+
       try {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-        const { recording } = await Audio.Recording.createAsync(RECORDING_OPTIONS);
-        recordingRef.current = recording;
+        if (Platform.OS === "web") {
+          // Web path: browser MediaRecorder
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          webStreamRef.current = stream;
+          webChunksRef.current = [];
+
+          const mr = new MediaRecorder(stream);
+          mr.ondataavailable = (e) => {
+            if (e.data.size > 0) webChunksRef.current.push(e.data);
+          };
+          mr.start();
+          webRecorderRef.current = mr;
+        } else {
+          // Native path: expo-av
+          if (!permissionGranted) return;
+          await Audio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+          });
+          const { recording } = await Audio.Recording.createAsync(
+            RECORDING_OPTIONS
+          );
+          recordingRef.current = recording;
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        }
+
         activeSpeakerRef.current = speakerIdx;
         setRecordingSpeaker(speakerIdx);
         setPhase("recording");
-        if (Platform.OS !== "web") {
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        }
-      } catch {
+      } catch (err) {
+        console.error("Start recording error:", err);
         setPhase("idle");
       }
     },
     [isProcessing, permissionGranted]
   );
 
+  // ─── Stop recording + pipeline ─────────────────────────────────────────────
   const handleMicPressOut = useCallback(async () => {
-    if (!recordingRef.current || activeSpeakerRef.current === null) return;
-
     const speakerIdx = activeSpeakerRef.current;
-    const speakers = [speaker1, speaker2];
+    const hasWebRecorder = Platform.OS === "web" && !!webRecorderRef.current;
+    const hasNativeRecording = Platform.OS !== "web" && !!recordingRef.current;
+    if (speakerIdx === null || (!hasWebRecorder && !hasNativeRecording)) return;
+
+    const speakers: [typeof speaker1, typeof speaker2] = [speaker1, speaker2];
     const thisSpeaker = speakers[speakerIdx];
     const otherSpeaker = speakers[1 - speakerIdx];
     const fromLang = thisSpeaker.lang === "auto" ? undefined : thisSpeaker.lang;
@@ -148,25 +195,43 @@ export default function SessionScreen() {
 
     setRecordingSpeaker(null);
     setIsProcessing(true);
+    activeSpeakerRef.current = null;
 
     try {
-      const recording = recordingRef.current;
-      recordingRef.current = null;
-      activeSpeakerRef.current = null;
+      // ── 1. Gather audio as base64 ──────────────────────────────────────────
+      let audioBase64: string;
+      let mimeType: string;
 
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-      if (!uri) throw new Error("No recording URI");
+      if (Platform.OS === "web") {
+        const mr = webRecorderRef.current!;
+        webRecorderRef.current = null;
+        await new Promise<void>((resolve) => {
+          mr.onstop = () => resolve();
+          mr.stop();
+        });
+        webStreamRef.current?.getTracks().forEach((t) => t.stop());
+        webStreamRef.current = null;
 
+        const blob = new Blob(webChunksRef.current, {
+          type: mr.mimeType || "audio/webm",
+        });
+        audioBase64 = await blobToBase64(blob);
+        mimeType = "audio/webm";
+      } else {
+        const recording = recordingRef.current!;
+        recordingRef.current = null;
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        if (!uri) throw new Error("No recording URI");
+        audioBase64 = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        mimeType = "audio/m4a";
+      }
+
+      // ── 2. Transcribe ──────────────────────────────────────────────────────
       setPhase("transcribing");
-      const audioBase64 = await FileSystem.readAsStringAsync(uri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-
-      const transcribeBody: Record<string, string> = {
-        audioBase64,
-        mimeType: "audio/m4a",
-      };
+      const transcribeBody: Record<string, string> = { audioBase64, mimeType };
       if (fromLang) transcribeBody.language = fromLang;
 
       const transcribeRes = await fetch(apiUrl("/umi/transcribe"), {
@@ -176,28 +241,25 @@ export default function SessionScreen() {
       });
       if (!transcribeRes.ok) throw new Error("Transcription failed");
       const { text } = (await transcribeRes.json()) as { text: string };
-
       if (!text?.trim()) {
         setPhase("idle");
         setIsProcessing(false);
         return;
       }
 
+      // ── 3. Translate ───────────────────────────────────────────────────────
       setPhase("translating");
       const translateRes = await fetch(apiUrl("/umi/translate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text,
-          fromLang: fromLang ?? "en",
-          toLang,
-        }),
+        body: JSON.stringify({ text, fromLang: fromLang ?? "en", toLang }),
       });
       if (!translateRes.ok) throw new Error("Translation failed");
       const { translatedText } = (await translateRes.json()) as {
         translatedText: string;
       };
 
+      // ── 4. Speak ───────────────────────────────────────────────────────────
       setPhase("speaking");
       const speakRes = await fetch(apiUrl("/umi/speak"), {
         method: "POST",
@@ -205,53 +267,59 @@ export default function SessionScreen() {
         body: JSON.stringify({ text: translatedText, lang: toLang }),
       });
       if (!speakRes.ok) throw new Error("TTS failed");
-      const { audioBase64: ttsBase64, mimeType: ttsMime } = (await speakRes.json()) as {
-        audioBase64: string;
-        mimeType: string;
-      };
+      const { audioBase64: ttsBase64, mimeType: ttsMime } =
+        (await speakRes.json()) as { audioBase64: string; mimeType: string };
 
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: false,
-        playsInSilentModeIOS: true,
-      });
-      soundRef.current?.unloadAsync().catch(() => {});
-      const { sound } = await Audio.Sound.createAsync({
-        uri: `data:${ttsMime};base64,${ttsBase64}`,
-      });
-      soundRef.current = sound;
-      await sound.playAsync();
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          sound.unloadAsync().catch(() => {});
-        }
-      });
-
-      if (Platform.OS !== "web") {
+      if (Platform.OS === "web") {
+        // Web playback via HTML Audio
+        const audio = new window.Audio(
+          `data:${ttsMime};base64,${ttsBase64}`
+        );
+        await audio.play();
+      } else {
+        // Native playback via expo-av
+        await Audio.setAudioModeAsync({
+          allowsRecordingIOS: false,
+          playsInSilentModeIOS: true,
+        });
+        soundRef.current?.unloadAsync().catch(() => {});
+        const { sound } = await Audio.Sound.createAsync({
+          uri: `data:${ttsMime};base64,${ttsBase64}`,
+        });
+        soundRef.current = sound;
+        await sound.playAsync();
+        sound.setOnPlaybackStatusUpdate((s) => {
+          if (s.isLoaded && s.didJustFinish) sound.unloadAsync().catch(() => {});
+        });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      const newTurn: Turn = {
-        id: makeId(),
-        speakerIdx,
-        original: text,
-        translated: translatedText,
-        timestamp: Date.now(),
-      };
-      setTurns((prev) => [...prev, newTurn]);
+      // ── 5. Update UI ───────────────────────────────────────────────────────
+      setTurns((prev) => [
+        ...prev,
+        {
+          id: makeId(),
+          speakerIdx,
+          original: text,
+          translated: translatedText,
+          timestamp: Date.now(),
+        },
+      ]);
       setPhase("idle");
     } catch (err) {
-      console.error("Session error:", err);
+      console.error("Session pipeline error:", err);
       setPhase("error");
-      setTimeout(() => setPhase("idle"), 2000);
+      setTimeout(() => setPhase("idle"), 2500);
     } finally {
-      recordingRef.current = null;
       activeSpeakerRef.current = null;
+      recordingRef.current = null;
+      webRecorderRef.current = null;
       setIsProcessing(false);
     }
   }, [speaker1, speaker2]);
 
   const handleEnd = useCallback(() => {
-    const session = {
+    saveSession({
       id: sessionId.current,
       title: sessionTitle || undefined,
       speaker1,
@@ -259,8 +327,7 @@ export default function SessionScreen() {
       turns,
       startedAt: sessionStart.current,
       endedAt: Date.now(),
-    };
-    saveSession(session);
+    });
     router.back();
   }, [speaker1, speaker2, turns, sessionTitle, saveSession]);
 
@@ -278,9 +345,8 @@ export default function SessionScreen() {
     transcribing: "Transcribing…",
     translating: "Translating…",
     speaking: "Speaking…",
-    error: "Try again",
+    error: "Error — try again",
   };
-
   const PHASE_COLORS: Record<StatusPhase, string> = {
     idle: colors.mutedForeground,
     recording: "#EF4444",
@@ -311,7 +377,6 @@ export default function SessionScreen() {
     divider: {
       height: 1,
       backgroundColor: `${colors.primary}40`,
-      marginHorizontal: 0,
       position: "relative",
     },
     statusBar: {
@@ -329,10 +394,7 @@ export default function SessionScreen() {
       borderWidth: 1,
       borderColor: `${colors.primary}60`,
     },
-    statusText: {
-      fontSize: 11,
-      fontFamily: "PlusJakartaSans_600SemiBold",
-    },
+    statusText: { fontSize: 11, fontFamily: "PlusJakartaSans_600SemiBold" },
     speakerRow: {
       flexDirection: "row",
       alignItems: "center",
@@ -389,9 +451,7 @@ export default function SessionScreen() {
       color: `${colors.foreground}40`,
       textAlign: "center",
     },
-    micRow: {
-      alignItems: "center",
-    },
+    micRow: { alignItems: "center" },
     micHint: {
       marginTop: 8,
       fontSize: 11,
@@ -399,42 +459,17 @@ export default function SessionScreen() {
       color: `${colors.foreground}50`,
       textAlign: "center",
     },
-    webOverlay: {
-      position: "absolute",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: `${colors.navy}CC`,
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 32,
-    },
-    webOverlayText: {
-      fontSize: 16,
-      fontFamily: "PlusJakartaSans_600SemiBold",
-      color: colors.foreground,
-      textAlign: "center",
-      lineHeight: 24,
-    },
   });
 
-  const SpeakerHalf = ({
-    speakerIdx,
-    inverted,
-  }: {
-    speakerIdx: 0 | 1;
-    inverted: boolean;
-  }) => {
+  // ─── Render each speaker half ──────────────────────────────────────────────
+  const renderHalf = (speakerIdx: 0 | 1, inverted: boolean) => {
     const sp = speakerIdx === 0 ? speaker1 : speaker2;
-    const otherSp = speakerIdx === 0 ? speaker2 : speaker1;
     const myLast = speakerIdx === 0 ? s1Last : s2Last;
     const theirLast = speakerIdx === 0 ? s2Last : s1Last;
     const isRec = speakerIdx === 0 ? isS1Recording : isS2Recording;
-    const halfStyle = inverted ? styles.topHalf : styles.bottomHalf;
 
     return (
-      <View style={halfStyle}>
+      <View style={inverted ? styles.topHalf : styles.bottomHalf}>
         <View style={styles.speakerRow}>
           <View style={styles.speakerChip}>
             <Ionicons name="person" size={12} color={colors.primary} />
@@ -442,7 +477,11 @@ export default function SessionScreen() {
             <Text style={styles.langLabel}>{getLangLabel(sp.lang)}</Text>
           </View>
           {!inverted && (
-            <TouchableOpacity style={styles.endBtn} onPress={handleEnd} testID="button-end-session">
+            <TouchableOpacity
+              style={styles.endBtn}
+              onPress={handleEnd}
+              testID="button-end-session"
+            >
               <Ionicons name="close" size={16} color={colors.destructive} />
             </TouchableOpacity>
           )}
@@ -462,9 +501,7 @@ export default function SessionScreen() {
             </>
           ) : (
             <Text style={styles.emptyHint}>
-              {inverted
-                ? `Hold the mic to speak in ${getLangLabel(sp.lang)}`
-                : `Hold the mic to speak in ${getLangLabel(sp.lang)}`}
+              Hold the mic to speak in {getLangLabel(sp.lang)}
             </Text>
           )}
         </View>
@@ -487,33 +524,19 @@ export default function SessionScreen() {
 
   return (
     <View style={styles.container}>
-      <SpeakerHalf speakerIdx={1} inverted />
+      {renderHalf(1, true)}
 
       <View style={styles.divider}>
         <Animated.View style={[styles.statusBar, statusAnimStyle]}>
           <View style={styles.statusPill}>
-            <Text
-              style={[
-                styles.statusText,
-                { color: PHASE_COLORS[phase] },
-              ]}
-            >
+            <Text style={[styles.statusText, { color: PHASE_COLORS[phase] }]}>
               {PHASE_LABELS[phase]}
             </Text>
           </View>
         </Animated.View>
       </View>
 
-      <SpeakerHalf speakerIdx={0} inverted={false} />
-
-      {Platform.OS === "web" && (
-        <View style={styles.webOverlay} pointerEvents="none">
-          <Ionicons name="phone-portrait-outline" size={40} color={colors.primary} />
-          <Text style={[styles.webOverlayText, { marginTop: 12 }]}>
-            Open XLango in Expo Go on your phone to use the microphone
-          </Text>
-        </View>
-      )}
+      {renderHalf(0, false)}
     </View>
   );
 }
