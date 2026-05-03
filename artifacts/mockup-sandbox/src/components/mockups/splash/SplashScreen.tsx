@@ -1,5 +1,5 @@
 export function SplashScreen() {
-  const bg = "#F7F5F1";
+  const bg = "#F2EBD9";
   const navy = "#0E1729";
   const amber = "#F59E0B";
   const mutedFg = "#6B7F96";
