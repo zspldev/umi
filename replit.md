@@ -35,6 +35,77 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
 
+## XLango Mobile (`artifacts/xlango-mobile`)
+
+Real-time voice interpreter app for two speakers. Expo (React Native) mobile app tested on physical iOS device via Expo Go. Preview path: `/xlango-mobile/`.
+
+**Brand identity:**
+- Colors: golden-amber `#F59E0B` + deep navy `#0E1729` (dark mode bg)
+- Fonts: Plus Jakarta Sans (400/500/600/700/800)
+- Image assets: `assets/images/xlango-mark.png` (1024×1024 globe/chat icon, transparent PNG), `assets/images/xlango-wordmark.png` (480×144 "xlango" text, transparent PNG)
+- Company logo: `assets/images/zapurzaa-logo.png` (Zapurzaa Systems, copper/bronze color)
+- Both logo PNGs have large transparent padding baked in — use aggressive negative margins (e.g. `marginBottom: -52` on mark, `-44` on wordmark) to visually tighten them
+
+**Color tokens (`constants/colors.ts`):**
+- `light`: background `#F7F9FB`, navy `#0E1729`, amber `#F59E0B`, card `#FFFFFF`
+- `dark`: background `#0E1729`, card `#111E36`, amber `#F59E0B`, muted `#182340`
+
+**Screens (`app/(tabs)/`):**
+- `index.tsx` — Session Setup: language selectors (Speaker 1 + 2), layout toggle, Start Session CTA
+- `session.tsx` — Live Interpreter: two mic buttons (one rotated 180° for face-to-face), real-time transcript cards
+- `history.tsx` — Session History list
+- `[id].tsx` — Session Transcript detail
+
+**Layout toggle:**
+- Face-to-face mode: Speaker 2 panel rotated 180° so speakers sit opposite each other
+- Side-by-side mode: both panels upright
+- Stored in `AppContext` + `AsyncStorage` key `@xlango/layoutMode`
+
+**Audio pipeline (native iOS + web):**
+1. Tap mic → toggle recording state
+2. Native: `expo-av` Audio (`InterruptionModeIOS.DoNotMix`, 150ms settle delay, 44100 Hz sample rate, prepareToRecordAsync + startAsync)
+3. Web: `getUserMedia` → `MediaRecorder` → `blobToBase64`
+4. Tap stop → read file via `expo-file-system/legacy` `readAsStringAsync(..., "base64")` → POST to `/api/umi/transcribe`
+5. Server: Whisper transcription → GPT translation → TTS
+6. Native playback: `expo-av` Sound with data URI; Web: `new window.Audio(dataUri).play()`
+
+**API base URL:** `https://${process.env.EXPO_PUBLIC_DOMAIN}/api`
+
+**Splash screen:**
+- Native (Expo Go loading): `app.json` → `splash.image: xlango-mark.png`, `splash.backgroundColor: #F2EBD9`
+- Custom in-app (`components/SplashScreenView.tsx`): shown after fonts load, fades in over 600ms, displays for ~1.8s then fades out over 400ms before showing the tabs
+  - Beige background `#F2EBD9`
+  - XLango imagemark → wordmark → tagline "Live Global Voice Interpreter"
+  - "Created by" label + Zapurzaa Systems logo
+  - Three amber loading dots at bottom
+- Wired in `app/_layout.tsx` via `showCustomSplash` state — renders `<SplashScreenView>` in place of `<RootLayoutNav>` until finished
+
+**Key files:**
+- `app/_layout.tsx` — root layout; font loading, native splash hide, custom splash gate
+- `app/(tabs)/index.tsx` — setup screen with hero logo cluster and session config
+- `app/(tabs)/session.tsx` — live interpreter with mic buttons and transcript
+- `components/SplashScreenView.tsx` — animated custom splash component
+- `components/MicButton.tsx` — tap-to-toggle mic (Pressable, single `onPress`)
+- `context/AppContext.tsx` — shared state: languages, layout mode (AsyncStorage)
+- `constants/colors.ts` — full light/dark color tokens
+- `assets/images/xlango-mark.png` — imagemark (also used as `icon.png`)
+- `assets/images/xlango-wordmark.png` — wordmark
+- `assets/images/zapurzaa-logo.png` — Zapurzaa Systems company logo
+
+**Key dependencies:**
+- `expo-av` v16 (SDK 53/54, deprecated — use `InterruptionModeIOS` from `expo-av`)
+- `expo-file-system/legacy` — `readAsStringAsync` (use string `"base64"` not `FileSystem.EncodingType.Base64`)
+- `expo-splash-screen` — `preventAutoHideAsync` / `hideAsync`
+- `expo-router` — file-based routing
+- `react-native-gesture-handler`, `react-native-keyboard-controller`, `react-native-safe-area-context`
+
+**Expo Go connection:**
+- Dev domain: `$REPLIT_EXPO_DEV_DOMAIN` (format: `*.expo.worf.replit.dev`)
+- QR code encodes: `https://<REPLIT_EXPO_DEV_DOMAIN>` — scan with Expo Go camera
+- App only works while the Replit project is running (dev server required); standalone build requires EAS Build + Apple Developer account
+
+---
+
 ## UMI App (`artifacts/umi-app`)
 
 Mobile-first PWA voice interpreter. Preview path: `/umi-app/`.
