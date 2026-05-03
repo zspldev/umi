@@ -76,7 +76,7 @@ type StatusPhase =
 export default function SessionScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { speaker1, speaker2, sessionTitle, saveSession } = useApp();
+  const { speaker1, speaker2, sessionTitle, saveSession, layoutMode, setLayoutMode } = useApp();
 
   const sessionId = useRef(makeId());
   const sessionStart = useRef(Date.now());
@@ -373,7 +373,6 @@ export default function SessionScreen() {
     container: { flex: 1, backgroundColor: colors.navy },
     topHalf: {
       flex: 1,
-      transform: [{ rotate: "180deg" }],
       padding: 20,
       paddingTop: topPad + 8,
       justifyContent: "space-between",
@@ -385,16 +384,34 @@ export default function SessionScreen() {
       justifyContent: "space-between",
     },
     divider: {
-      height: 1,
-      backgroundColor: `${colors.primary}40`,
+      height: 44,
+      backgroundColor: colors.navy,
+      borderTopWidth: 1,
+      borderBottomWidth: 1,
+      borderColor: `${colors.primary}30`,
       position: "relative",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
     },
     statusBar: {
       position: "absolute",
       left: 0,
       right: 0,
-      top: -14,
+      top: 0,
+      bottom: 0,
       alignItems: "center",
+      justifyContent: "center",
+    },
+    layoutToggle: {
+      position: "absolute",
+      right: 16,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+      backgroundColor: `${colors.primary}18`,
+      alignItems: "center",
+      justifyContent: "center",
     },
     statusPill: {
       paddingHorizontal: 12,
@@ -480,8 +497,15 @@ export default function SessionScreen() {
     const otherIsActive =
       (speakerIdx === 0 ? isS2Recording : isS1Recording) || isProcessing;
 
+    const rotate = inverted && layoutMode === "face-to-face";
+
     return (
-      <View style={inverted ? styles.topHalf : styles.bottomHalf}>
+      <View
+        style={[
+          inverted ? styles.topHalf : styles.bottomHalf,
+          rotate && { transform: [{ rotate: "180deg" }] },
+        ]}
+      >
         <View style={styles.speakerRow}>
           <View style={styles.speakerChip}>
             <Ionicons name="person" size={12} color={colors.primary} />
@@ -538,13 +562,31 @@ export default function SessionScreen() {
       {renderHalf(1, true)}
 
       <View style={styles.divider}>
-        <Animated.View style={[styles.statusBar, statusAnimStyle]}>
+        {/* Status pill — centred, fades in/out */}
+        <Animated.View style={[styles.statusBar, statusAnimStyle]} pointerEvents="none">
           <View style={styles.statusPill}>
             <Text style={[styles.statusText, { color: PHASE_COLORS[phase] }]}>
               {PHASE_LABELS[phase]}
             </Text>
           </View>
         </Animated.View>
+
+        {/* Layout toggle — always visible, right-aligned */}
+        <TouchableOpacity
+          style={styles.layoutToggle}
+          onPress={() =>
+            setLayoutMode(
+              layoutMode === "face-to-face" ? "side-by-side" : "face-to-face"
+            )
+          }
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          <Ionicons
+            name={layoutMode === "face-to-face" ? "swap-vertical" : "people"}
+            size={16}
+            color={colors.primary}
+          />
+        </TouchableOpacity>
       </View>
 
       {renderHalf(0, false)}
