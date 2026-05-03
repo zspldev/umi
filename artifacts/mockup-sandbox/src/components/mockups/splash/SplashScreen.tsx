@@ -6,6 +6,7 @@ export function SplashScreen() {
   const domain = "1201c571-c9f2-4e45-8bcf-f648e5787b31-00-qlpylgbbo9ec.worf.replit.dev";
   const markUrl = `https://${domain}:5904/xlango-mark.png`;
   const wordmarkUrl = `https://${domain}:5904/xlango-wordmark.png`;
+  const zapurzaaUrl = `https://${domain}:5904/zapurzaa-logo.png`;
 
   return (
     <div
@@ -91,7 +92,7 @@ export function SplashScreen() {
           Created by
         </p>
         <img
-          src="/zapurzaa-logo.png"
+          src={zapurzaaUrl}
           alt="Zapurzaa Systems"
           style={{
             width: 200,
