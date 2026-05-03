@@ -260,8 +260,8 @@ export default function SetupScreen() {
     },
     hero: {
       alignItems: "center",
-      paddingVertical: 12,
-      gap: 4,
+      paddingVertical: 8,
+      gap: 0,
     },
     logoMark: {
       width: 100,
@@ -272,7 +272,8 @@ export default function SetupScreen() {
       width: 480,
       height: 144,
       resizeMode: "contain",
-      marginTop: -16,
+      marginTop: -26,
+      marginBottom: -10,
     },
     appTagline: {
       fontSize: 12,
@@ -280,7 +281,6 @@ export default function SetupScreen() {
       color: colors.mutedForeground,
       letterSpacing: 2,
       textTransform: "uppercase",
-      marginTop: 2,
     },
     sessionCard: {
       backgroundColor: colors.card,
