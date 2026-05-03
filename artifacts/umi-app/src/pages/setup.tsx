@@ -117,7 +117,15 @@ export default function Setup() {
                   <SelectContent>
                     <SelectItem value="auto">Auto (Detect)</SelectItem>
                     <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="zh">Mandarin Chinese (中文)</SelectItem>
                     <SelectItem value="hi">Hindi (हिंदी)</SelectItem>
+                    <SelectItem value="es">Spanish (Español)</SelectItem>
+                    <SelectItem value="ar">Arabic (العربية)</SelectItem>
+                    <SelectItem value="pt">Portuguese (Português)</SelectItem>
+                    <SelectItem value="fr">French (Français)</SelectItem>
+                    <SelectItem value="ru">Russian (Русский)</SelectItem>
+                    <SelectItem value="ja">Japanese (日本語)</SelectItem>
+                    <SelectItem value="de">German (Deutsch)</SelectItem>
                     <SelectItem value="mr">Marathi (मराठी)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -157,11 +165,16 @@ export default function Setup() {
                   <SelectContent>
                     <SelectItem value="auto">Auto (Detect)</SelectItem>
                     <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="zh">Mandarin Chinese (中文)</SelectItem>
                     <SelectItem value="hi">Hindi (हिंदी)</SelectItem>
-                    <SelectItem value="mr">Marathi (मराठी)</SelectItem>
                     <SelectItem value="es">Spanish (Español)</SelectItem>
+                    <SelectItem value="ar">Arabic (العربية)</SelectItem>
+                    <SelectItem value="pt">Portuguese (Português)</SelectItem>
+                    <SelectItem value="fr">French (Français)</SelectItem>
+                    <SelectItem value="ru">Russian (Русский)</SelectItem>
                     <SelectItem value="ja">Japanese (日本語)</SelectItem>
                     <SelectItem value="de">German (Deutsch)</SelectItem>
+                    <SelectItem value="mr">Marathi (मराठी)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

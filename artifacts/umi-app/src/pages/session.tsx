@@ -9,15 +9,19 @@ import { toast } from 'sonner';
 const langMap: Record<string, string> = {
   auto: 'Auto',
   en: 'English',
+  zh: 'Mandarin',
   hi: 'Hindi',
-  mr: 'Marathi',
   es: 'Spanish',
+  ar: 'Arabic',
+  pt: 'Portuguese',
+  fr: 'French',
+  ru: 'Russian',
   ja: 'Japanese',
-  de: 'German'
+  de: 'German',
+  mr: 'Marathi',
 };
 
-const S1_LANGS = ['en', 'hi', 'mr'] as const;
-const S2_LANGS = ['en', 'hi', 'mr', 'es', 'ja', 'de'] as const;
+const ALL_LANGS = ['en', 'zh', 'hi', 'es', 'ar', 'pt', 'fr', 'ru', 'ja', 'de', 'mr'] as const;
 
 function SignalBadge({ latencyMs }: { latencyMs: number | null }) {
   let color = 'bg-white/30';
@@ -208,7 +212,7 @@ export default function Session() {
             {session.speakerOneLang === 'auto' && phase === 'idle' && (
               langOverrideOpen === 1 ? (
                 <LangOverride
-                  langs={S1_LANGS}
+                  langs={ALL_LANGS}
                   dark={true}
                   onSelect={lang => handleLangOverride(1, lang)}
                   onCancel={() => setLangOverrideOpen(null)}
@@ -273,7 +277,7 @@ export default function Session() {
             {session.speakerTwoLang === 'auto' && phase === 'idle' && (
               langOverrideOpen === 2 ? (
                 <LangOverride
-                  langs={S2_LANGS}
+                  langs={ALL_LANGS}
                   dark={false}
                   onSelect={lang => handleLangOverride(2, lang)}
                   onCancel={() => setLangOverrideOpen(null)}

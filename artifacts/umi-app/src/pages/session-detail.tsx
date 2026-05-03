@@ -7,11 +7,16 @@ import { format } from 'date-fns';
 const langMap: Record<string, string> = {
   auto: 'Auto',
   en: 'English',
+  zh: 'Mandarin',
   hi: 'Hindi',
-  mr: 'Marathi',
   es: 'Spanish',
+  ar: 'Arabic',
+  pt: 'Portuguese',
+  fr: 'French',
+  ru: 'Russian',
   ja: 'Japanese',
-  de: 'German'
+  de: 'German',
+  mr: 'Marathi',
 };
 
 export default function SessionDetail() {

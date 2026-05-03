@@ -16,11 +16,16 @@ const router = Router();
 
 const LANG_NAMES: Record<string, string> = {
   en: "English",
+  zh: "Mandarin Chinese",
   hi: "Hindi",
-  mr: "Marathi",
   es: "Spanish",
+  ar: "Arabic",
+  pt: "Portuguese",
+  fr: "French",
+  ru: "Russian",
   ja: "Japanese",
   de: "German",
+  mr: "Marathi",
 };
 
 router.post("/transcribe", async (req, res) => {
@@ -124,7 +129,12 @@ const SCRIPT_RULES = `MANDATORY SCRIPT RULES:
 - Marathi → MUST use Devanagari script (नमस्कार). NEVER use Arabic script.
 - English → Latin alphabet only.
 - Spanish → Latin alphabet only.
+- Portuguese → Latin alphabet only.
+- French → Latin alphabet only.
 - German → Latin alphabet only.
+- Russian → Cyrillic script (Кириллица). NEVER use Latin transliteration.
+- Arabic → Arabic script (العربية). Use Modern Standard Arabic (MSA). NEVER romanize.
+- Mandarin Chinese → Simplified Chinese characters (汉字). NEVER romanize (no Pinyin).
 - Japanese → Japanese script (Hiragana/Katakana/Kanji). NEVER romanize.`;
 
 router.get("/realtime-token", async (req, res) => {
