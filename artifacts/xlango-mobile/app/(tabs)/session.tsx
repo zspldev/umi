@@ -250,7 +250,7 @@ export default function SessionScreen() {
         const uri = recording.getURI();
         if (!uri) throw new Error("No recording URI");
         audioBase64 = await FileSystem.readAsStringAsync(uri, {
-          encoding: FileSystem.EncodingType.Base64,
+          encoding: "base64",
         });
         mimeType = "audio/m4a";
       }
