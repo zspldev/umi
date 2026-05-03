@@ -269,10 +269,10 @@ export default function SetupScreen() {
       resizeMode: "contain",
     },
     wordmark: {
-      width: 260,
-      height: 78,
+      width: 320,
+      height: 96,
       resizeMode: "contain",
-      marginTop: -8,
+      marginTop: -10,
     },
     appTagline: {
       fontSize: 12,
