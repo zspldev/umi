@@ -260,20 +260,20 @@ export default function SetupScreen() {
     },
     hero: {
       alignItems: "center",
-      paddingVertical: 8,
+      paddingVertical: 0,
       gap: 0,
     },
     logoMark: {
-      width: 100,
-      height: 100,
+      width: 110,
+      height: 110,
       resizeMode: "contain",
+      marginBottom: -38,
     },
     wordmark: {
       width: 480,
       height: 144,
       resizeMode: "contain",
-      marginTop: -26,
-      marginBottom: -10,
+      marginBottom: -30,
     },
     appTagline: {
       fontSize: 12,
