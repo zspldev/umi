@@ -267,13 +267,13 @@ export default function SetupScreen() {
       width: 110,
       height: 110,
       resizeMode: "contain",
-      marginBottom: -38,
+      marginBottom: -52,
     },
     wordmark: {
       width: 480,
       height: 144,
       resizeMode: "contain",
-      marginBottom: -30,
+      marginBottom: -44,
     },
     appTagline: {
       fontSize: 12,
