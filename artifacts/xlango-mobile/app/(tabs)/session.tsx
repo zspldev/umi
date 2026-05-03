@@ -56,14 +56,10 @@ function makeId() {
   return Date.now().toString() + Math.random().toString(36).slice(2, 9);
 }
 
-// Convert a Blob to base64 string (web only)
 function blobToBase64(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.split(",")[1]);
-    };
+    reader.onload = () => resolve((reader.result as string).split(",")[1]);
     reader.onerror = reject;
     reader.readAsDataURL(blob);
   });
@@ -109,7 +105,6 @@ export default function SessionScreen() {
     opacity: statusOpacity.value,
   }));
 
-  // Request native microphone permission on mount
   useEffect(() => {
     if (Platform.OS === "web") return;
     Audio.requestPermissionsAsync().then(({ status }) => {
@@ -122,7 +117,6 @@ export default function SessionScreen() {
         );
       }
     });
-
     return () => {
       soundRef.current?.unloadAsync().catch(() => {});
       recordingRef.current?.stopAndUnloadAsync().catch(() => {});
@@ -136,19 +130,15 @@ export default function SessionScreen() {
   }, [phase]);
 
   // ─── Start recording ───────────────────────────────────────────────────────
-  const handleMicPressIn = useCallback(
+  const startRecording = useCallback(
     async (speakerIdx: 0 | 1) => {
-      if (isProcessing) return;
-
       try {
         if (Platform.OS === "web") {
-          // Web path: browser MediaRecorder
           const stream = await navigator.mediaDevices.getUserMedia({
             audio: true,
           });
           webStreamRef.current = stream;
           webChunksRef.current = [];
-
           const mr = new MediaRecorder(stream);
           mr.ondataavailable = (e) => {
             if (e.data.size > 0) webChunksRef.current.push(e.data);
@@ -156,7 +146,6 @@ export default function SessionScreen() {
           mr.start();
           webRecorderRef.current = mr;
         } else {
-          // Native path: expo-av
           if (!permissionGranted) return;
           await Audio.setAudioModeAsync({
             allowsRecordingIOS: true,
@@ -177,20 +166,22 @@ export default function SessionScreen() {
         setPhase("idle");
       }
     },
-    [isProcessing, permissionGranted]
+    [permissionGranted]
   );
 
-  // ─── Stop recording + pipeline ─────────────────────────────────────────────
-  const handleMicPressOut = useCallback(async () => {
+  // ─── Stop recording + run pipeline ────────────────────────────────────────
+  const stopAndProcess = useCallback(async () => {
     const speakerIdx = activeSpeakerRef.current;
     const hasWebRecorder = Platform.OS === "web" && !!webRecorderRef.current;
-    const hasNativeRecording = Platform.OS !== "web" && !!recordingRef.current;
+    const hasNativeRecording =
+      Platform.OS !== "web" && !!recordingRef.current;
     if (speakerIdx === null || (!hasWebRecorder && !hasNativeRecording)) return;
 
     const speakers: [typeof speaker1, typeof speaker2] = [speaker1, speaker2];
     const thisSpeaker = speakers[speakerIdx];
     const otherSpeaker = speakers[1 - speakerIdx];
-    const fromLang = thisSpeaker.lang === "auto" ? undefined : thisSpeaker.lang;
+    const fromLang =
+      thisSpeaker.lang === "auto" ? undefined : thisSpeaker.lang;
     const toLang = otherSpeaker.lang === "auto" ? "en" : otherSpeaker.lang;
 
     setRecordingSpeaker(null);
@@ -198,7 +189,7 @@ export default function SessionScreen() {
     activeSpeakerRef.current = null;
 
     try {
-      // ── 1. Gather audio as base64 ──────────────────────────────────────────
+      // 1. Gather audio as base64
       let audioBase64: string;
       let mimeType: string;
 
@@ -211,7 +202,6 @@ export default function SessionScreen() {
         });
         webStreamRef.current?.getTracks().forEach((t) => t.stop());
         webStreamRef.current = null;
-
         const blob = new Blob(webChunksRef.current, {
           type: mr.mimeType || "audio/webm",
         });
@@ -229,7 +219,7 @@ export default function SessionScreen() {
         mimeType = "audio/m4a";
       }
 
-      // ── 2. Transcribe ──────────────────────────────────────────────────────
+      // 2. Transcribe
       setPhase("transcribing");
       const transcribeBody: Record<string, string> = { audioBase64, mimeType };
       if (fromLang) transcribeBody.language = fromLang;
@@ -247,7 +237,7 @@ export default function SessionScreen() {
         return;
       }
 
-      // ── 3. Translate ───────────────────────────────────────────────────────
+      // 3. Translate
       setPhase("translating");
       const translateRes = await fetch(apiUrl("/umi/translate"), {
         method: "POST",
@@ -259,7 +249,7 @@ export default function SessionScreen() {
         translatedText: string;
       };
 
-      // ── 4. Speak ───────────────────────────────────────────────────────────
+      // 4. Speak
       setPhase("speaking");
       const speakRes = await fetch(apiUrl("/umi/speak"), {
         method: "POST",
@@ -271,13 +261,11 @@ export default function SessionScreen() {
         (await speakRes.json()) as { audioBase64: string; mimeType: string };
 
       if (Platform.OS === "web") {
-        // Web playback via HTML Audio
         const audio = new window.Audio(
           `data:${ttsMime};base64,${ttsBase64}`
         );
         await audio.play();
       } else {
-        // Native playback via expo-av
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
@@ -289,12 +277,13 @@ export default function SessionScreen() {
         soundRef.current = sound;
         await sound.playAsync();
         sound.setOnPlaybackStatusUpdate((s) => {
-          if (s.isLoaded && s.didJustFinish) sound.unloadAsync().catch(() => {});
+          if (s.isLoaded && s.didJustFinish)
+            sound.unloadAsync().catch(() => {});
         });
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      // ── 5. Update UI ───────────────────────────────────────────────────────
+      // 5. Update transcript
       setTurns((prev) => [
         ...prev,
         {
@@ -318,7 +307,30 @@ export default function SessionScreen() {
     }
   }, [speaker1, speaker2]);
 
+  // ─── Toggle handler passed to each MicButton ──────────────────────────────
+  const handleMicToggle = useCallback(
+    (speakerIdx: 0 | 1) => {
+      if (isProcessing) return;
+      // If this speaker is already recording → stop
+      if (activeSpeakerRef.current === speakerIdx) {
+        stopAndProcess();
+        return;
+      }
+      // If the OTHER speaker is recording → ignore (can't record both at once)
+      if (activeSpeakerRef.current !== null) return;
+      // Start recording for this speaker
+      startRecording(speakerIdx);
+    },
+    [isProcessing, startRecording, stopAndProcess]
+  );
+
   const handleEnd = useCallback(() => {
+    // Stop any active recording before leaving
+    if (webRecorderRef.current) {
+      webRecorderRef.current.stop();
+      webStreamRef.current?.getTracks().forEach((t) => t.stop());
+    }
+    recordingRef.current?.stopAndUnloadAsync().catch(() => {});
     saveSession({
       id: sessionId.current,
       title: sessionTitle || undefined,
@@ -331,10 +343,8 @@ export default function SessionScreen() {
     router.back();
   }, [speaker1, speaker2, turns, sessionTitle, saveSession]);
 
-  const s1Turns = turns.filter((t) => t.speakerIdx === 0);
-  const s2Turns = turns.filter((t) => t.speakerIdx === 1);
-  const s1Last = s1Turns[s1Turns.length - 1];
-  const s2Last = s2Turns[s2Turns.length - 1];
+  const s1Last = turns.filter((t) => t.speakerIdx === 0).at(-1);
+  const s2Last = turns.filter((t) => t.speakerIdx === 1).at(-1);
 
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const botPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -461,12 +471,14 @@ export default function SessionScreen() {
     },
   });
 
-  // ─── Render each speaker half ──────────────────────────────────────────────
   const renderHalf = (speakerIdx: 0 | 1, inverted: boolean) => {
     const sp = speakerIdx === 0 ? speaker1 : speaker2;
     const myLast = speakerIdx === 0 ? s1Last : s2Last;
     const theirLast = speakerIdx === 0 ? s2Last : s1Last;
     const isRec = speakerIdx === 0 ? isS1Recording : isS2Recording;
+    // Disable the OTHER speaker's button while one is recording or processing
+    const otherIsActive =
+      (speakerIdx === 0 ? isS2Recording : isS1Recording) || isProcessing;
 
     return (
       <View style={inverted ? styles.topHalf : styles.bottomHalf}>
@@ -501,21 +513,20 @@ export default function SessionScreen() {
             </>
           ) : (
             <Text style={styles.emptyHint}>
-              Hold the mic to speak in {getLangLabel(sp.lang)}
+              Tap the mic to speak in {getLangLabel(sp.lang)}
             </Text>
           )}
         </View>
 
         <View style={styles.micRow}>
           <MicButton
-            onPressIn={() => handleMicPressIn(speakerIdx)}
-            onPressOut={handleMicPressOut}
+            onPress={() => handleMicToggle(speakerIdx)}
             isRecording={isRec}
             isProcessing={isProcessing && !isRec}
-            disabled={isProcessing}
+            disabled={otherIsActive}
           />
           <Text style={styles.micHint}>
-            {isRec ? "Release to translate" : "Hold to speak"}
+            {isRec ? "Tap to stop & translate" : "Tap to speak"}
           </Text>
         </View>
       </View>

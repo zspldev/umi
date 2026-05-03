@@ -1,6 +1,6 @@
 import * as Haptics from "expo-haptics";
 import React, { useEffect } from "react";
-import { ActivityIndicator, Platform, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, Platform, Pressable, StyleSheet } from "react-native";
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -15,8 +15,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useColors } from "@/hooks/useColors";
 
 interface MicButtonProps {
-  onPressIn: () => void;
-  onPressOut: () => void;
+  onPress: () => void;
   isRecording: boolean;
   isProcessing: boolean;
   disabled?: boolean;
@@ -24,8 +23,7 @@ interface MicButtonProps {
 }
 
 export function MicButton({
-  onPressIn,
-  onPressOut,
+  onPress,
   isRecording,
   isProcessing,
   disabled = false,
@@ -78,24 +76,25 @@ export function MicButton({
   const iconColor =
     disabled || isProcessing ? colors.mutedForeground : "#FFFFFF";
 
-  const handlePressIn = () => {
+  const handlePress = () => {
     if (disabled || isProcessing) return;
-    scale.value = withSpring(0.88, { damping: 12, stiffness: 200 });
+    scale.value = withSequence(
+      withSpring(0.88, { damping: 12, stiffness: 200 }),
+      withSpring(1, { damping: 12, stiffness: 200 })
+    );
     if (Platform.OS !== "web") {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      Haptics.impactAsync(
+        isRecording
+          ? Haptics.ImpactFeedbackStyle.Light
+          : Haptics.ImpactFeedbackStyle.Medium
+      );
     }
-    onPressIn();
-  };
-
-  const handlePressOut = () => {
-    scale.value = withSpring(1, { damping: 12, stiffness: 200 });
-    onPressOut();
+    onPress();
   };
 
   return (
     <Pressable
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
+      onPress={handlePress}
       disabled={disabled || isProcessing}
       style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}
       testID="mic-button"
