@@ -1,36 +1,6 @@
 uploads = []
 
 [[generated]]
-id = "5JyUoxtg6g8v7HyJmc_0I"
-uri = "file://attached_assets/generated_images/xlango-wordmark-1.png"
-type = "image"
-title = "xlango-wordmark-minimal"
-
-[[generated]]
-id = "lFRcGt45pIsCaBgiCr_l2"
-uri = "file://attached_assets/generated_images/xlango-wordmark-2.png"
-type = "image"
-title = "xlango-wordmark-expressive"
-
-[[generated]]
-id = "t2D9FWCqaJj0asGpDBpi2"
-uri = "file://attached_assets/generated_images/xlango-v2-amber-navy.png"
-type = "image"
-title = "xlango-v2-amber-navy"
-
-[[generated]]
-id = "LJmJJ6M55T8wELJEx1L7Q"
-uri = "file://attached_assets/generated_images/xlango-v2-teal-navy.png"
-type = "image"
-title = "xlango-v2-teal-navy"
-
-[[generated]]
-id = "uJ5RPZky_6yXp-aA8Rn84"
-uri = "file://attached_assets/generated_images/xlango-v2-navy-amber.png"
-type = "image"
-title = "xlango-v2-navy-amber"
-
-[[generated]]
 id = "x63Sv1-Qpd12V_YXU6rVH"
 uri = "file://artifacts/xlango-mobile/assets/images/icon.png"
 type = "image"

@@ -264,15 +264,15 @@ export default function SetupScreen() {
       gap: 4,
     },
     logoMark: {
-      width: 96,
-      height: 96,
+      width: 100,
+      height: 100,
       resizeMode: "contain",
     },
     wordmark: {
-      width: 200,
-      height: 60,
+      width: 260,
+      height: 78,
       resizeMode: "contain",
-      marginTop: -4,
+      marginTop: -8,
     },
     appTagline: {
       fontSize: 12,
@@ -367,7 +367,7 @@ export default function SetupScreen() {
         <View style={styles.hero}>
           <Image source={IMG_MARK} style={styles.logoMark} />
           <Image source={IMG_WORDMARK} style={styles.wordmark} />
-          <Text style={styles.appTagline}>Real-Time Voice Interpreter</Text>
+          <Text style={styles.appTagline}>Live Global Voice Interpreter</Text>
         </View>
 
         <View style={styles.sessionCard}>
