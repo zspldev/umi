@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import * as FileSystem from "expo-file-system";
 import * as Haptics from "expo-haptics";
-import { Audio } from "expo-av";
+import { Audio, InterruptionModeIOS, InterruptionModeAndroid } from "expo-av";
 import { router } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -29,7 +29,7 @@ const RECORDING_OPTIONS: Audio.RecordingOptions = {
     extension: ".m4a",
     outputFormat: Audio.AndroidOutputFormat.MPEG_4,
     audioEncoder: Audio.AndroidAudioEncoder.AAC,
-    sampleRate: 16000,
+    sampleRate: 44100,
     numberOfChannels: 1,
     bitRate: 128000,
   },
@@ -37,7 +37,7 @@ const RECORDING_OPTIONS: Audio.RecordingOptions = {
     extension: ".m4a",
     outputFormat: Audio.IOSOutputFormat.MPEG4AAC,
     audioQuality: Audio.IOSAudioQuality.HIGH,
-    sampleRate: 16000,
+    sampleRate: 44100,
     numberOfChannels: 1,
     bitRate: 128000,
     linearPCMBitDepth: 16,
@@ -154,19 +154,40 @@ export default function SessionScreen() {
             soundRef.current = null;
           }
 
-          // Switch audio session to recording mode
+          // Switch audio session to recording mode with exclusive access (DoNotMix
+          // is required — MixWithOthers prevents prepareToRecord from succeeding)
           await Audio.setAudioModeAsync({
             allowsRecordingIOS: true,
             playsInSilentModeIOS: true,
+            interruptionModeIOS: InterruptionModeIOS.DoNotMix,
+            shouldDuckAndroid: true,
+            interruptionModeAndroid: InterruptionModeAndroid.DoNotMix,
+            playThroughEarpieceAndroid: false,
+            staysActiveInBackground: false,
           });
 
-          // Give iOS a moment to reconfigure the audio session
-          await new Promise<void>((r) => setTimeout(r, 80));
+          // Give iOS time to reconfigure the audio hardware
+          await new Promise<void>((r) => setTimeout(r, 150));
 
-          // Step-by-step recording init (more reliable than createAsync)
-          const recording = new Audio.Recording();
-          await recording.prepareToRecordAsync(RECORDING_OPTIONS);
-          await recording.startAsync();
+          // Attempt recording with one retry on failure
+          let recording: Audio.Recording | null = null;
+          for (let attempt = 0; attempt < 2; attempt++) {
+            try {
+              recording = new Audio.Recording();
+              await recording.prepareToRecordAsync(RECORDING_OPTIONS);
+              await recording.startAsync();
+              break;
+            } catch (prepErr) {
+              await recording.stopAndUnloadAsync().catch(() => {});
+              recording = null;
+              if (attempt === 0) {
+                await new Promise<void>((r) => setTimeout(r, 250));
+              } else {
+                throw prepErr;
+              }
+            }
+          }
+          if (!recording) throw new Error("Recording failed to start");
           recordingRef.current = recording;
 
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
