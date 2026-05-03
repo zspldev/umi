@@ -4,6 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import React, { useState } from "react";
 import {
+  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +16,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
+const IMG_MARK = require("../../assets/images/xlango-mark.png");
+const IMG_WORDMARK = require("../../assets/images/xlango-wordmark.png");
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { LanguagePicker } from "@/components/LanguagePicker";
@@ -257,27 +261,18 @@ export default function SetupScreen() {
     hero: {
       alignItems: "center",
       paddingVertical: 12,
-      gap: 6,
+      gap: 4,
     },
-    logoBox: {
-      width: 64,
-      height: 64,
-      borderRadius: 20,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: colors.primary,
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.35,
-      shadowRadius: 16,
-      elevation: 10,
-      marginBottom: 4,
+    logoMark: {
+      width: 96,
+      height: 96,
+      resizeMode: "contain",
     },
-    appName: {
-      fontSize: 32,
-      fontFamily: "PlusJakartaSans_800ExtraBold",
-      color: colors.secondary,
-      letterSpacing: -0.5,
+    wordmark: {
+      width: 200,
+      height: 60,
+      resizeMode: "contain",
+      marginTop: -4,
     },
     appTagline: {
       fontSize: 12,
@@ -285,6 +280,7 @@ export default function SetupScreen() {
       color: colors.mutedForeground,
       letterSpacing: 2,
       textTransform: "uppercase",
+      marginTop: 2,
     },
     sessionCard: {
       backgroundColor: colors.card,
@@ -369,10 +365,8 @@ export default function SetupScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.hero}>
-          <View style={styles.logoBox}>
-            <Ionicons name="language" size={30} color={colors.primaryForeground} />
-          </View>
-          <Text style={styles.appName}>XLango</Text>
+          <Image source={IMG_MARK} style={styles.logoMark} />
+          <Image source={IMG_WORDMARK} style={styles.wordmark} />
           <Text style={styles.appTagline}>Real-Time Voice Interpreter</Text>
         </View>
 

@@ -1,36 +1,6 @@
 uploads = []
 
 [[generated]]
-id = "61iGYFwLCKOVGu54FXLn9"
-uri = "file://attached_assets/generated_images/umi-logo.png"
-type = "image"
-title = "umi-logo"
-
-[[generated]]
-id = "AyhpN6tX_e2bwmpVJ7tMJ"
-uri = "file://attached_assets/generated_images/umi-logo-white.png"
-type = "image"
-title = "umi-logo-white"
-
-[[generated]]
-id = "voKshtk2t4CtVAU6g7SEi"
-uri = "file://attached_assets/generated_images/umi-logo-transparent.png"
-type = "image"
-title = "umi-logo-transparent"
-
-[[generated]]
-id = "MSErVVWAuay_2d-onLGns"
-uri = "file://attached_assets/generated_images/umi-logo-original-white.png"
-type = "image"
-title = "umi-logo-original-white"
-
-[[generated]]
-id = "67hVqlicBltQyVq-SB82Z"
-uri = "file://attached_assets/generated_images/umi-logo-original-transparent.png"
-type = "image"
-title = "umi-logo-original-transparent"
-
-[[generated]]
 id = "5JyUoxtg6g8v7HyJmc_0I"
 uri = "file://attached_assets/generated_images/xlango-wordmark-1.png"
 type = "image"
@@ -77,63 +47,3 @@ id = "Cj2GYMIDoOzDLS4zJTutG"
 uri = "file://UMI Improvements.md"
 type = "text"
 title = "UMI Improvements.md"
-
-[[outputs]]
-id = "gTfN7Nco1qkAYfZcGPSRl"
-uri = "file://attached_assets/generated_images/umi-logo.png"
-type = "image"
-title = "UMI Logo"
-
-[[outputs]]
-id = "YNEV7Nm0SLdZGisgnvmGf"
-uri = "file://attached_assets/generated_images/umi-logo-white.png"
-type = "image"
-title = "UMI Logo — White Background"
-
-[[outputs]]
-id = "odXSRP1re9p0xCY-RxZMM"
-uri = "file://attached_assets/generated_images/umi-logo-transparent.png"
-type = "image"
-title = "UMI Logo — Transparent Background"
-
-[[outputs]]
-id = "7tgN5J4RwTi42Pt26Udf_"
-uri = "file://attached_assets/generated_images/umi-logo-original-white.png"
-type = "image"
-title = "UMI Logo (Original) — White Background"
-
-[[outputs]]
-id = "2vknAQ6_Y3kEV-MCDibk1"
-uri = "file://attached_assets/generated_images/umi-logo-original-transparent.png"
-type = "image"
-title = "UMI Logo (Original) — Transparent Background"
-
-[[outputs]]
-id = "OB5QA1zQMcJlP8SXFpvaI"
-uri = "file://attached_assets/generated_images/xlango-wordmark-1.png"
-type = "image"
-title = "XLango Wordmark — Design 1 (Minimal, Two-Tone)"
-
-[[outputs]]
-id = "K2RPyUqCL_x3FaTJoAmOc"
-uri = "file://attached_assets/generated_images/xlango-wordmark-2.png"
-type = "image"
-title = "XLango Wordmark — Design 2 (Expressive, Speech-Wave X)"
-
-[[outputs]]
-id = "hE1ltZlNi3fbOTPVhQQiP"
-uri = "file://attached_assets/generated_images/xlango-v2-amber-navy.png"
-type = "image"
-title = "XLango — Amber X + Navy Lango"
-
-[[outputs]]
-id = "jdg6OO9LHFqRsH8yj77_h"
-uri = "file://attached_assets/generated_images/xlango-v2-teal-navy.png"
-type = "image"
-title = "XLango — Teal X + Navy Lango"
-
-[[outputs]]
-id = "QWhgn3b0GetSpOIwtFyia"
-uri = "file://attached_assets/generated_images/xlango-v2-navy-amber.png"
-type = "image"
-title = "XLango — Navy X + Amber Lango"
