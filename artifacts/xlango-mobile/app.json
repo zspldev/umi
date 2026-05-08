@@ -16,7 +16,18 @@
     "ios": {
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.zapurzaa.xlango",
+      "versionCode": 1,
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/xlango-mark.png",
+        "backgroundColor": "#F2EBD9"
+      },
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.INTERNET"
+      ]
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },
