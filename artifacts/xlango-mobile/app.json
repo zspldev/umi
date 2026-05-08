@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "xlango-mobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": false,
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/images/xlango-mark.png",
       "resizeMode": "contain",
