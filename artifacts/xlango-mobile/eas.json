@@ -13,7 +13,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "REPLACE_WITH_DEPLOYED_URL"
+        "EXPO_PUBLIC_DOMAIN": "xlango.replit.app"
       }
     },
     "production": {
@@ -21,7 +21,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_DOMAIN": "REPLACE_WITH_DEPLOYED_URL"
+        "EXPO_PUBLIC_DOMAIN": "xlango.replit.app"
       }
     }
   },

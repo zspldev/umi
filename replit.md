@@ -212,7 +212,8 @@ Real-time voice interpreter app for two speakers. Expo (React Native) mobile app
   - `preview` → `.apk` (internal distribution, sideload directly)
   - `production` → `.aab` (Google Play bundle)
 - To build APK: `cd artifacts/xlango-mobile && eas login && eas build -p android --profile preview`
-- Set `EXPO_PUBLIC_DOMAIN` in `eas.json` → `env` to your deployed backend URL before building
+- `EXPO_PUBLIC_DOMAIN` is set to `xlango.replit.app` in `eas.json` (production backend URL)
+- **Production URL**: `https://xlango.replit.app`
 
 **Key files:**
 - `app/_layout.tsx` — root layout; font loading, native splash hide, custom splash gate
