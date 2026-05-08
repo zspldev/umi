@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { trackingHeaders, getDeviceId } from '../lib/device';
 
 export type RealtimePhase = 'idle' | 'connecting' | 'recording' | 'processing' | 'playing';
 
@@ -34,7 +35,27 @@ function int16ToBase64(pcm16: Int16Array): string {
   return btoa(binary);
 }
 
-export function useRealtimeTranslation() {
+/** Report realtime turn usage to the backend (fire-and-forget). */
+function reportRealtimeUsage(sessionId: string | undefined, usage: {
+  audioInputTokens: number;
+  audioOutputTokens: number;
+  textInputTokens: number;
+  textOutputTokens: number;
+}): void {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...trackingHeaders(),
+  };
+  if (sessionId) headers['X-Session-Id'] = sessionId;
+
+  fetch('/api/umi/usage/realtime', {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ sessionId, ...usage }),
+  }).catch(() => {});
+}
+
+export function useRealtimeTranslation(sessionId?: string) {
   const [phase, setPhase] = useState<RealtimePhase>('idle');
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [canReplay, setCanReplay] = useState(false);
@@ -125,7 +146,7 @@ export function useRealtimeTranslation() {
         audioChunksRef.current.push(float32);
         const ctx = audioCtxRef.current;
         const buf = ctx.createBuffer(1, float32.length, 24000);
-        buf.copyToChannel(float32, 0);
+        buf.copyToChannel(float32 as Float32Array<ArrayBuffer>, 0);
         const src = ctx.createBufferSource();
         src.buffer = buf;
         src.connect(ctx.destination);
@@ -148,6 +169,18 @@ export function useRealtimeTranslation() {
         const outputTranscript = msg.response?.output?.[0]?.content?.[0]?.transcript;
         if (outputTranscript) translationRef.current = outputTranscript;
         responseDoneRef.current = true;
+
+        // Report token usage to backend (fire-and-forget)
+        const usage = msg.response?.usage;
+        if (usage) {
+          reportRealtimeUsage(sessionId, {
+            audioInputTokens: usage.input_token_details?.audio_tokens ?? 0,
+            audioOutputTokens: usage.output_token_details?.audio_tokens ?? 0,
+            textInputTokens: usage.input_token_details?.text_tokens ?? 0,
+            textOutputTokens: usage.output_token_details?.text_tokens ?? 0,
+          });
+        }
+
         scheduleFinalize();
         break;
       }
@@ -158,7 +191,7 @@ export function useRealtimeTranslation() {
         setPhase('idle');
         break;
     }
-  }, [scheduleFinalize]);
+  }, [scheduleFinalize, sessionId]);
 
   const startTurn = useCallback(async (
     fromLang: string,
@@ -188,7 +221,12 @@ export function useRealtimeTranslation() {
     let clientSecret: string;
     try {
       const genderParam = speakerGender && speakerGender !== 'unspecified' ? `&gender=${speakerGender}` : '';
-      const res = await fetch(`/api/umi/realtime-token?fromLang=${fromLang}&toLang=${toLang}${genderParam}`);
+      const headers: Record<string, string> = { ...trackingHeaders() };
+      if (sessionId) headers['X-Session-Id'] = sessionId;
+
+      const res = await fetch(`/api/umi/realtime-token?fromLang=${fromLang}&toLang=${toLang}${genderParam}`, {
+        headers,
+      });
       if (!res.ok) throw new Error(`Token fetch failed: ${res.status}`);
       const body = await res.json();
       clientSecret = body.clientSecret;
@@ -289,7 +327,7 @@ export function useRealtimeTranslation() {
       clearSilenceTimer();
       stopMic();
     };
-  }, [handleMessage, stopMic, clearSilenceTimer]);
+  }, [handleMessage, stopMic, clearSilenceTimer, sessionId]);
 
   const stopRecording = useCallback(() => {
     clearSilenceTimer();

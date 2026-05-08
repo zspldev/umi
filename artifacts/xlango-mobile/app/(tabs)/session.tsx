@@ -23,6 +23,7 @@ import { MicButton } from "@/components/MicButton";
 import { getLangLabel } from "@/components/LanguagePicker";
 import { useApp, Turn } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { trackingHeaders } from "@/lib/device";
 
 const RECORDING_OPTIONS: Audio.RecordingOptions = {
   android: {
@@ -178,7 +179,7 @@ export default function SessionScreen() {
               await recording.startAsync();
               break;
             } catch (prepErr) {
-              await recording.stopAndUnloadAsync().catch(() => {});
+              await recording?.stopAndUnloadAsync().catch(() => {});
               recording = null;
               if (attempt === 0) {
                 await new Promise<void>((r) => setTimeout(r, 250));
@@ -260,9 +261,10 @@ export default function SessionScreen() {
       const transcribeBody: Record<string, string> = { audioBase64, mimeType };
       if (fromLang) transcribeBody.language = fromLang;
 
+      const commonHeaders = await trackingHeaders(sessionId.current);
       const transcribeRes = await fetch(apiUrl("/umi/transcribe"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...commonHeaders },
         body: JSON.stringify(transcribeBody),
       });
       if (!transcribeRes.ok) throw new Error("Transcription failed");
@@ -277,7 +279,7 @@ export default function SessionScreen() {
       setPhase("translating");
       const translateRes = await fetch(apiUrl("/umi/translate"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...commonHeaders },
         body: JSON.stringify({ text, fromLang: fromLang ?? "en", toLang }),
       });
       if (!translateRes.ok) throw new Error("Translation failed");
@@ -289,7 +291,7 @@ export default function SessionScreen() {
       setPhase("speaking");
       const speakRes = await fetch(apiUrl("/umi/speak"), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...commonHeaders },
         body: JSON.stringify({ text: translatedText, lang: toLang }),
       });
       if (!speakRes.ok) throw new Error("TTS failed");

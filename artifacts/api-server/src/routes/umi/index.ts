@@ -11,6 +11,9 @@ import {
   TranslateTextBody,
   SpeakTextBody,
 } from "@workspace/api-zod";
+import type { Request } from "express";
+import { calcTranscribeCost, calcTranslateCost, calcTtsCost, calcRealtimeCost } from "../../lib/pricing.js";
+import { upsertUser, upsertSession, logTurn } from "../../lib/usage.js";
 
 const router = Router();
 
@@ -28,6 +31,15 @@ const LANG_NAMES: Record<string, string> = {
   mr: "Marathi",
 };
 
+/** Extract tracking headers from the request. */
+function trackingHeaders(req: Request) {
+  const deviceId = req.headers["x-device-id"] as string | undefined;
+  const displayName = req.headers["x-display-name"] as string | undefined;
+  const sessionId = req.headers["x-session-id"] as string | undefined;
+  const appSource = (req.headers["x-app-source"] as string | undefined) ?? "unknown";
+  return { deviceId, displayName, sessionId, appSource };
+}
+
 router.post("/transcribe", async (req, res) => {
   try {
     const parse = TranscribeAudioBody.safeParse(req.body);
@@ -43,6 +55,23 @@ router.post("/transcribe", async (req, res) => {
     const text = await speechToText(buffer, format, language);
 
     res.json({ text });
+
+    // Track usage asynchronously — don't block the response
+    const { deviceId, displayName, sessionId, appSource } = trackingHeaders(req);
+    const fromLang = language ?? "unknown";
+    // WAV at 16kHz mono = 32000 bytes/sec
+    const audioSeconds = buffer.length / 32000;
+    const costUsd = calcTranscribeCost(audioSeconds);
+    upsertUser(deviceId, displayName).catch(() => {});
+    upsertSession({ sessionId, deviceId, fromLang, toLang: fromLang, appSource }).catch(() => {});
+    logTurn({
+      sessionId,
+      deviceId,
+      model: "gpt-4o-mini-transcribe",
+      endpoint: "transcribe",
+      audioSeconds,
+      costUsd,
+    }).catch(() => {});
   } catch (err) {
     const message = err instanceof Error ? err.message : "Transcription failed";
     res.status(500).json({ error: message });
@@ -99,6 +128,23 @@ Examples:
 
     const translatedText = response.choices[0]?.message?.content?.trim() ?? "";
     res.json({ translatedText });
+
+    // Track usage asynchronously
+    const { deviceId, displayName, sessionId, appSource } = trackingHeaders(req);
+    const inputTokens = response.usage?.prompt_tokens ?? 0;
+    const outputTokens = response.usage?.completion_tokens ?? 0;
+    const costUsd = calcTranslateCost(inputTokens, outputTokens);
+    upsertUser(deviceId, displayName).catch(() => {});
+    upsertSession({ sessionId, deviceId, fromLang, toLang, appSource }).catch(() => {});
+    logTurn({
+      sessionId,
+      deviceId,
+      model: "gpt-5.1",
+      endpoint: "translate",
+      inputTokens,
+      outputTokens,
+      costUsd,
+    }).catch(() => {});
   } catch (err) {
     const message = err instanceof Error ? err.message : "Translation failed";
     res.status(500).json({ error: message });
@@ -118,6 +164,20 @@ router.post("/speak", async (req, res) => {
     const audioBase64 = audioBuffer.toString("base64");
 
     res.json({ audioBase64, mimeType: "audio/mpeg" });
+
+    // Track usage asynchronously
+    const { deviceId, displayName, sessionId, appSource } = trackingHeaders(req);
+    const charCount = text.length;
+    const costUsd = calcTtsCost(charCount);
+    upsertUser(deviceId, displayName).catch(() => {});
+    logTurn({
+      sessionId,
+      deviceId,
+      model: "gpt-audio",
+      endpoint: "speak",
+      charCount,
+      costUsd,
+    }).catch(() => {});
   } catch (err) {
     const message = err instanceof Error ? err.message : "Text-to-speech failed";
     res.status(500).json({ error: message });
@@ -184,9 +244,58 @@ Rules:
       temperature: 0.7,
     });
 
+    // Upsert session row asynchronously
+    const { deviceId, displayName, sessionId, appSource } = trackingHeaders(req);
+    upsertUser(deviceId, displayName).catch(() => {});
+    upsertSession({ sessionId, deviceId, fromLang, toLang, appSource }).catch(() => {});
+
     res.json({ clientSecret: session.client_secret.value });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create realtime session";
+    res.status(500).json({ error: message });
+  }
+});
+
+/**
+ * POST /api/umi/usage/realtime
+ * Called by the client after a Realtime API response.done event.
+ * Body: { sessionId, audioInputTokens, audioOutputTokens, textInputTokens, textOutputTokens }
+ */
+router.post("/usage/realtime", async (req, res) => {
+  try {
+    const {
+      sessionId,
+      audioInputTokens = 0,
+      audioOutputTokens = 0,
+      textInputTokens = 0,
+      textOutputTokens = 0,
+    } = req.body as {
+      sessionId?: string;
+      audioInputTokens?: number;
+      audioOutputTokens?: number;
+      textInputTokens?: number;
+      textOutputTokens?: number;
+    };
+
+    const { deviceId, displayName } = trackingHeaders(req);
+    const costUsd = calcRealtimeCost({ audioInputTokens, audioOutputTokens, textInputTokens, textOutputTokens });
+
+    upsertUser(deviceId, displayName).catch(() => {});
+    logTurn({
+      sessionId,
+      deviceId,
+      model: "gpt-4o-mini-realtime-preview",
+      endpoint: "realtime",
+      audioInputTokens,
+      audioOutputTokens,
+      inputTokens: textInputTokens,
+      outputTokens: textOutputTokens,
+      costUsd,
+    }).catch(() => {});
+
+    res.json({ ok: true, costUsd });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Failed to record usage";
     res.status(500).json({ error: message });
   }
 });
