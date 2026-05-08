@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "xlango-mobile",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/images/xlango-mark.png",
       "resizeMode": "contain",
@@ -25,7 +25,8 @@
       },
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.INTERNET"
+        "android.permission.INTERNET",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
       ]
     },
     "web": {
@@ -45,6 +46,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "b46f3828-3ddd-448d-bb24-0abeef7e664e"
+      }
     }
   }
 }
