@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.zapurzaa.xlango",
-      "versionCode": 2,
+      "versionCode": 3,
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/xlango-mark.png",
         "backgroundColor": "#F2EBD9"
