@@ -243,9 +243,72 @@ Real-time voice interpreter app for two speakers. Expo (React Native) mobile app
 
 ---
 
+## Shared Languages Library (`lib/languages`)
+
+**Single source of truth for all supported languages across every app and the API server.**
+
+To add or remove a language, edit only one file: `lib/languages/src/index.ts`.
+No changes are needed in the web app, mobile app, or API server — they all derive their lists from this library automatically.
+
+### File: `lib/languages/src/index.ts`
+
+Exports:
+
+| Export | Type | Used by |
+|---|---|---|
+| `LANGUAGES` | `Language[]` | Web app dropdown, mobile picker |
+| `LANG_NAMES` | `Record<string, string>` | API server translation prompt instructions |
+
+`Language` interface:
+```ts
+interface Language {
+  code: string;   // ISO 639-1 code, e.g. "ja", or "auto" for auto-detect
+  label: string;  // English name used in AI instructions, e.g. "Japanese"
+  native: string; // Native script shown in UI, e.g. "日本語"
+}
+```
+
+`LANG_NAMES` is auto-derived — it filters out `"auto"` and maps `code → label`. No separate maintenance needed.
+
+### Currently supported languages (as of May 2026)
+
+| Code | Label | Native |
+|---|---|---|
+| auto | Auto Detect | Auto |
+| en | English | English |
+| zh | Mandarin Chinese | 中文 |
+| hi | Hindi | हिंदी |
+| es | Spanish | Español |
+| ar | Arabic | العربية |
+| pt | Portuguese | Português |
+| fr | French | Français |
+| ru | Russian | Русский |
+| ja | Japanese | 日本語 |
+| de | German | Deutsch |
+| mr | Marathi | मराठी |
+
+### How each consumer uses the library
+
+- **Web app** (`artifacts/umi-app/src/pages/setup.tsx`) — imports `LANGUAGES`, maps over it to render `<SelectItem>` entries for both speaker dropdowns
+- **Mobile app** (`artifacts/xlango-mobile/components/LanguagePicker.tsx`) — imports `LANGUAGES`, renders the scrollable picker modal
+- **API server** (`artifacts/api-server/src/routes/umi/index.ts`) — imports `LANG_NAMES`, uses it to build the AI translation instructions (e.g. "translate into natural, fluent Japanese")
+
+### Adding a new language
+
+1. Open `lib/languages/src/index.ts`
+2. Append one entry to the `LANGUAGES` array:
+   ```ts
+   { code: "ko", label: "Korean", native: "한국어" },
+   ```
+3. Run `pnpm run typecheck:libs` to rebuild the composite lib
+4. All three consumers pick up the change automatically — no further edits needed
+5. Redeploy the API server; web/mobile apps hot-reload in dev
+
+---
+
 ## UMI App (`artifacts/umi-app`)
 
-Mobile-first PWA voice interpreter. Preview path: `/umi-app/`.
+Mobile-first PWA voice interpreter. Preview path: `/xlango-app/`.
 
 **Features:**
 - Live voice sessions between two speakers
@@ -253,12 +316,12 @@ Mobile-first PWA voice interpreter. Preview path: `/umi-app/`.
 - 4 pages: Setup → Session → History → Session Detail
 - Sessions stored in `localStorage` (key: `umi_sessions`) — transcript history, no DB
 - Golden-amber (#F59E0B) + deep navy (#1E2D45) theme
-- PWA manifest + service worker at `/umi-app/manifest.json` and `/umi-app/sw.js`
+- PWA manifest + service worker at `/xlango-app/manifest.json` and `/xlango-app/sw.js`
 - Noto Sans Devanagari font loaded for Hindi/Marathi text
 
 **Speaker languages:**
-- Speaker 1: English, Hindi, Marathi
-- Speaker 2: English, Hindi, Marathi, Spanish, Japanese, German
+Managed centrally via `@workspace/languages` — see the Shared Languages Library section above.
+Both speaker dropdowns render dynamically from the shared `LANGUAGES` array; no hardcoded list in this app.
 
 **Audio pipeline (session.tsx) — Realtime API:**
 1. Tap mic → `GET /api/umi/realtime-token?fromLang=X&toLang=Y` with tracking headers
