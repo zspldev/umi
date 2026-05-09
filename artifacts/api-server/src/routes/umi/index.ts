@@ -258,7 +258,7 @@ STRICT RULES — violating any of these is a critical failure:
       output_audio_format: "pcm16",
       input_audio_transcription: { model: "whisper-1" },
       turn_detection: null,
-      temperature: 0,
+      temperature: 0.6,
     });
 
     // Upsert session row asynchronously
