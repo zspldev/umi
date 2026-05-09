@@ -96,7 +96,7 @@ export default function Session() {
   // which speaker's language override picker is open (null = none)
   const [langOverrideOpen, setLangOverrideOpen] = useState<1 | 2 | null>(null);
 
-  const { phase, latencyMs, canReplay, replayAudio, startTurn, stopRecording, cleanup } = useRealtimeTranslation();
+  const { phase, latencyMs, canReplay, replayAudio, startTurn, stopRecording, cleanup } = useRealtimeTranslation(sessionId ?? undefined);
   const isRecording = phase === 'recording';
   const isBusy = phase !== 'idle' && phase !== 'recording';
 
