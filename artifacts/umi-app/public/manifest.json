@@ -2,8 +2,8 @@
   "name": "xlango — Live Global Voice Interpreter",
   "short_name": "xlango",
   "description": "Live voice interpreter for real-time multilingual conversations",
-  "start_url": "/umi-app/",
-  "scope": "/umi-app/",
+  "start_url": "/xlango-app/",
+  "scope": "/xlango-app/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#F2EBD9",
@@ -11,19 +11,19 @@
   "categories": ["utilities", "productivity"],
   "icons": [
     {
-      "src": "/umi-app/icon-192.png",
+      "src": "/xlango-app/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/umi-app/icon-512.png",
+      "src": "/xlango-app/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/umi-app/apple-touch-icon.png",
+      "src": "/xlango-app/apple-touch-icon.png",
       "sizes": "180x180",
       "type": "image/png",
       "purpose": "any"

@@ -1,8 +1,8 @@
-const CACHE_NAME = 'umi-v1';
+const CACHE_NAME = 'xlango-v1';
 const PRECACHE_URLS = [
-  '/umi-app/',
-  '/umi-app/manifest.json',
-  '/umi-app/favicon.svg'
+  '/xlango-app/',
+  '/xlango-app/manifest.json',
+  '/xlango-app/favicon.svg'
 ];
 
 self.addEventListener('install', (event) => {
