@@ -119,13 +119,6 @@ export default function Session() {
   const isProcessing = phase === 'processing';
   const isPlaying = phase === 'playing';
 
-  // If pointer was released during the connecting phase, stop as soon as recording starts
-  useEffect(() => {
-    if (phase === 'recording' && !pointerDownRef.current) {
-      stopRecording();
-    }
-  }, [phase, stopRecording]);
-
   useEffect(() => {
     if (!loaded) return;
     if (!session) {
@@ -180,8 +173,14 @@ export default function Session() {
   };
 
   const handlePointerUp = () => {
+    if (!pointerDownRef.current) return;
     pointerDownRef.current = false;
-    if (phase === 'recording') stopRecording();
+    if (phase === 'recording') {
+      stopRecording();
+    } else if (phase === 'connecting') {
+      // Released before recording started — abort cleanly
+      cleanup();
+    }
   };
 
   const handleLangOverride = (speaker: 1 | 2, lang: string) => {
