@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/umi-app/"
+previewPath = "/xlango-app/"
 title = "UMI App"
 version = "1.0.0"
 id = "artifacts/umi-app"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/umi-app/" ]
+paths = [ "/xlango-app/" ]
 localPort = 25145
 
 [services.development]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "25145"
-BASE_PATH = "/umi-app/"
+BASE_PATH = "/xlango-app/"
