@@ -229,10 +229,7 @@ export default function SessionScreen() {
 
     setRecordingSpeaker(null);
     setIsProcessing(true);
-    setErrorDetail(null);
     activeSpeakerRef.current = null;
-
-    let ttsTempUri: string | null = null;
 
     try {
       // 1. Gather audio as base64
@@ -258,7 +255,7 @@ export default function SessionScreen() {
         recordingRef.current = null;
         await recording.stopAndUnloadAsync();
         const uri = recording.getURI();
-        if (!uri) throw Object.assign(new Error("No recording URI"), { step: "Recording", reason: "Audio file was not saved." });
+        if (!uri) throw new Error("No recording URI");
         audioBase64 = await FileSystem.readAsStringAsync(uri, {
           encoding: "base64",
         });
@@ -271,20 +268,12 @@ export default function SessionScreen() {
       if (fromLang) transcribeBody.language = fromLang;
 
       const commonHeaders = await trackingHeaders(sessionId.current);
-      let transcribeRes: Response;
-      try {
-        transcribeRes = await fetch(apiUrl("/umi/transcribe"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...commonHeaders },
-          body: JSON.stringify(transcribeBody),
-        });
-      } catch {
-        throw Object.assign(new Error("Network error"), { step: "Transcription", reason: "Cannot reach server. Check your connection." });
-      }
-      if (!transcribeRes.ok) {
-        const msg = await transcribeRes.text().catch(() => "");
-        throw Object.assign(new Error("Transcription failed"), { step: "Transcription", reason: `Server error ${transcribeRes.status}${msg ? ": " + msg.slice(0, 80) : ""}` });
-      }
+      const transcribeRes = await fetch(apiUrl("/umi/transcribe"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...commonHeaders },
+        body: JSON.stringify(transcribeBody),
+      });
+      if (!transcribeRes.ok) throw new Error("Transcription failed");
       const { text } = (await transcribeRes.json()) as { text: string };
       if (!text?.trim()) {
         setPhase("idle");
@@ -294,40 +283,24 @@ export default function SessionScreen() {
 
       // 3. Translate
       setPhase("translating");
-      let translateRes: Response;
-      try {
-        translateRes = await fetch(apiUrl("/umi/translate"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...commonHeaders },
-          body: JSON.stringify({ text, fromLang: fromLang ?? "en", toLang }),
-        });
-      } catch {
-        throw Object.assign(new Error("Network error"), { step: "Translation", reason: "Cannot reach server. Check your connection." });
-      }
-      if (!translateRes.ok) {
-        const msg = await translateRes.text().catch(() => "");
-        throw Object.assign(new Error("Translation failed"), { step: "Translation", reason: `Server error ${translateRes.status}${msg ? ": " + msg.slice(0, 80) : ""}` });
-      }
+      const translateRes = await fetch(apiUrl("/umi/translate"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...commonHeaders },
+        body: JSON.stringify({ text, fromLang: fromLang ?? "en", toLang }),
+      });
+      if (!translateRes.ok) throw new Error("Translation failed");
       const { translatedText } = (await translateRes.json()) as {
         translatedText: string;
       };
 
       // 4. Speak
       setPhase("speaking");
-      let speakRes: Response;
-      try {
-        speakRes = await fetch(apiUrl("/umi/speak"), {
-          method: "POST",
-          headers: { "Content-Type": "application/json", ...commonHeaders },
-          body: JSON.stringify({ text: translatedText, lang: toLang }),
-        });
-      } catch {
-        throw Object.assign(new Error("Network error"), { step: "Text-to-speech", reason: "Cannot reach server. Check your connection." });
-      }
-      if (!speakRes.ok) {
-        const msg = await speakRes.text().catch(() => "");
-        throw Object.assign(new Error("TTS failed"), { step: "Text-to-speech", reason: `Server error ${speakRes.status}${msg ? ": " + msg.slice(0, 80) : ""}` });
-      }
+      const speakRes = await fetch(apiUrl("/umi/speak"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...commonHeaders },
+        body: JSON.stringify({ text: translatedText, lang: toLang }),
+      });
+      if (!speakRes.ok) throw new Error("TTS failed");
       const { audioBase64: ttsBase64, mimeType: ttsMime } =
         (await speakRes.json()) as { audioBase64: string; mimeType: string };
 
@@ -337,33 +310,20 @@ export default function SessionScreen() {
         );
         await audio.play();
       } else {
-        // Android cannot load audio from data: URIs — write to a temp file first
-        const ext = ttsMime.includes("mp3") ? "mp3" : ttsMime.includes("wav") ? "wav" : "mp3";
-        ttsTempUri = FileSystem.cacheDirectory + `tts_${Date.now()}.${ext}`;
-        await FileSystem.writeAsStringAsync(ttsTempUri, ttsBase64, {
-          encoding: "base64",
-        });
         await Audio.setAudioModeAsync({
           allowsRecordingIOS: false,
           playsInSilentModeIOS: true,
         });
         soundRef.current?.unloadAsync().catch(() => {});
-        let sound: Audio.Sound;
-        try {
-          ({ sound } = await Audio.Sound.createAsync({ uri: ttsTempUri }));
-        } catch (e) {
-          throw Object.assign(new Error("Playback failed"), { step: "Playback", reason: "Could not load TTS audio file." });
-        }
+        const { sound } = await Audio.Sound.createAsync({
+          uri: `data:${ttsMime};base64,${ttsBase64}`,
+        });
         soundRef.current = sound;
         await sound.playAsync();
-        const tempPath = ttsTempUri;
         sound.setOnPlaybackStatusUpdate((s) => {
-          if (s.isLoaded && s.didJustFinish) {
+          if (s.isLoaded && s.didJustFinish)
             sound.unloadAsync().catch(() => {});
-            FileSystem.deleteAsync(tempPath, { idempotent: true }).catch(() => {});
-          }
         });
-        ttsTempUri = null; // ownership transferred to the callback
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
@@ -380,20 +340,9 @@ export default function SessionScreen() {
       ]);
       setPhase("idle");
     } catch (err) {
-      const e = err as { step?: string; reason?: string; message?: string };
-      const step = e.step ?? "Unknown";
-      const reason = e.reason ?? e.message ?? "Unexpected error.";
-      console.error(`[XLango] ${step} error:`, reason, err);
-      setErrorDetail({ step, reason });
+      console.error("Session pipeline error:", err);
       setPhase("error");
-      setTimeout(() => {
-        setPhase("idle");
-        setErrorDetail(null);
-      }, 5000);
-      // Clean up any temp file that wasn't handed off
-      if (ttsTempUri) {
-        FileSystem.deleteAsync(ttsTempUri, { idempotent: true }).catch(() => {});
-      }
+      setTimeout(() => setPhase("idle"), 2500);
     } finally {
       activeSpeakerRef.current = null;
       recordingRef.current = null;
@@ -450,7 +399,7 @@ export default function SessionScreen() {
     transcribing: "Transcribing…",
     translating: "Translating…",
     speaking: "Speaking…",
-    error: errorDetail ? `${errorDetail.step} failed` : "Error — try again",
+    error: "Error — try again",
   };
   const PHASE_COLORS: Record<StatusPhase, string> = {
     idle: colors.mutedForeground,
@@ -659,17 +608,10 @@ export default function SessionScreen() {
       <View style={styles.divider}>
         {/* Status pill — centred, fades in/out */}
         <Animated.View style={[styles.statusBar, statusAnimStyle]} pointerEvents="none">
-          <View style={{ alignItems: "center", gap: 2 }}>
-            <View style={styles.statusPill}>
-              <Text style={[styles.statusText, { color: PHASE_COLORS[phase] }]}>
-                {PHASE_LABELS[phase]}
-              </Text>
-            </View>
-            {phase === "error" && errorDetail?.reason ? (
-              <Text style={{ fontSize: 10, fontFamily: "PlusJakartaSans_400Regular", color: "#EF4444", textAlign: "center", paddingHorizontal: 24 }} numberOfLines={2}>
-                {errorDetail.reason}
-              </Text>
-            ) : null}
+          <View style={styles.statusPill}>
+            <Text style={[styles.statusText, { color: PHASE_COLORS[phase] }]}>
+              {PHASE_LABELS[phase]}
+            </Text>
           </View>
         </Animated.View>
 
