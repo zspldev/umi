@@ -1,11 +1,20 @@
 import { Router } from "express";
 import { Buffer } from "node:buffer";
+import OpenAI from "openai";
 import {
   speechToText,
   textToSpeech,
   ensureCompatibleFormat,
 } from "@workspace/integrations-openai-ai-server/audio";
 import { openai } from "@workspace/integrations-openai-ai-server";
+
+if (!process.env.OPENAI_REALTIME_API_KEY) {
+  throw new Error("OPENAI_REALTIME_API_KEY must be set for the Realtime API endpoint.");
+}
+
+const realtimeOpenai = new OpenAI({
+  apiKey: process.env.OPENAI_REALTIME_API_KEY,
+});
 import {
   TranscribeAudioBody,
   TranslateTextBody,
@@ -232,7 +241,7 @@ Rules:
 - Do NOT transliterate — use the actual ${toName} vocabulary.
 - Translate everything including questions, statements, and exclamations.`;
 
-    const session = await (openai.beta.realtime.sessions as any).create({
+    const session = await (realtimeOpenai.beta.realtime.sessions as any).create({
       model: "gpt-4o-mini-realtime-preview",
       voice: "alloy",
       instructions,
