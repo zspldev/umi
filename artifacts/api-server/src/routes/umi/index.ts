@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { Buffer } from "node:buffer";
 import OpenAI from "openai";
+import { LANG_NAMES } from "@workspace/languages";
 import {
   speechToText,
   textToSpeech,
@@ -26,19 +27,6 @@ import { upsertUser, upsertSession, logTurn } from "../../lib/usage.js";
 
 const router = Router();
 
-const LANG_NAMES: Record<string, string> = {
-  en: "English",
-  zh: "Mandarin Chinese",
-  hi: "Hindi",
-  es: "Spanish",
-  ar: "Arabic",
-  pt: "Portuguese",
-  fr: "French",
-  ru: "Russian",
-  ja: "Japanese",
-  de: "German",
-  mr: "Marathi",
-};
 
 /** Extract tracking headers from the request. */
 function trackingHeaders(req: Request) {

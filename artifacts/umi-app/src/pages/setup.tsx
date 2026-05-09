@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Button } from '@/components/ui/button';
 import { History, ArrowRight } from 'lucide-react';
 import { useSessionStore, SpeakerGender } from '@/lib/store';
+import { LANGUAGES } from '@workspace/languages';
 
 const GENDERS: { value: SpeakerGender; label: string }[] = [
   { value: 'male',        label: 'Male'   },
@@ -123,18 +124,11 @@ export default function Setup() {
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Auto (Detect)</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="zh">Mandarin Chinese (中文)</SelectItem>
-                    <SelectItem value="hi">Hindi (हिंदी)</SelectItem>
-                    <SelectItem value="es">Spanish (Español)</SelectItem>
-                    <SelectItem value="ar">Arabic (العربية)</SelectItem>
-                    <SelectItem value="pt">Portuguese (Português)</SelectItem>
-                    <SelectItem value="fr">French (Français)</SelectItem>
-                    <SelectItem value="ru">Russian (Русский)</SelectItem>
-                    <SelectItem value="ja">Japanese (日本語)</SelectItem>
-                    <SelectItem value="de">German (Deutsch)</SelectItem>
-                    <SelectItem value="mr">Marathi (मराठी)</SelectItem>
+                    {LANGUAGES.map((l) => (
+                      <SelectItem key={l.code} value={l.code}>
+                        {l.code === 'auto' ? 'Auto (Detect)' : `${l.label} (${l.native})`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -171,18 +165,11 @@ export default function Setup() {
                     <SelectValue placeholder="Select language" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto">Auto (Detect)</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="zh">Mandarin Chinese (中文)</SelectItem>
-                    <SelectItem value="hi">Hindi (हिंदी)</SelectItem>
-                    <SelectItem value="es">Spanish (Español)</SelectItem>
-                    <SelectItem value="ar">Arabic (العربية)</SelectItem>
-                    <SelectItem value="pt">Portuguese (Português)</SelectItem>
-                    <SelectItem value="fr">French (Français)</SelectItem>
-                    <SelectItem value="ru">Russian (Русский)</SelectItem>
-                    <SelectItem value="ja">Japanese (日本語)</SelectItem>
-                    <SelectItem value="de">German (Deutsch)</SelectItem>
-                    <SelectItem value="mr">Marathi (मराठी)</SelectItem>
+                    {LANGUAGES.map((l) => (
+                      <SelectItem key={l.code} value={l.code}>
+                        {l.code === 'auto' ? 'Auto (Detect)' : `${l.label} (${l.native})`}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

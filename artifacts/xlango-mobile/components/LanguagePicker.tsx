@@ -13,21 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
-
-export const LANGUAGES = [
-  { code: "auto", label: "Auto Detect", native: "Auto" },
-  { code: "en", label: "English", native: "English" },
-  { code: "zh", label: "Mandarin Chinese", native: "中文" },
-  { code: "hi", label: "Hindi", native: "हिंदी" },
-  { code: "es", label: "Spanish", native: "Español" },
-  { code: "ar", label: "Arabic", native: "العربية" },
-  { code: "pt", label: "Portuguese", native: "Português" },
-  { code: "fr", label: "French", native: "Français" },
-  { code: "ru", label: "Russian", native: "Русский" },
-  { code: "ja", label: "Japanese", native: "日本語" },
-  { code: "de", label: "German", native: "Deutsch" },
-  { code: "mr", label: "Marathi", native: "मराठी" },
-];
+import { LANGUAGES } from "@workspace/languages";
 
 export function getLangLabel(code: string) {
   return LANGUAGES.find((l) => l.code === code)?.native ?? code;
