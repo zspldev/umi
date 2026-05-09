@@ -1,12 +1,12 @@
 {
-  "name": "UMI — Universal Interpreter",
-  "short_name": "UMI",
+  "name": "xlango — Live Global Voice Interpreter",
+  "short_name": "xlango",
   "description": "Live voice interpreter for real-time multilingual conversations",
   "start_url": "/umi-app/",
   "scope": "/umi-app/",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#1E2D45",
+  "background_color": "#F2EBD9",
   "theme_color": "#F59E0B",
   "categories": ["utilities", "productivity"],
   "icons": [

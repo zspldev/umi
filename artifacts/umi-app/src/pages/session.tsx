@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Mic, X, Loader2, ArrowRightLeft, Square, Volume2, RotateCcw, Globe } from 'lucide-react';
+import { Mic, X, Loader2, ArrowRightLeft, Volume2, RotateCcw, Globe, FlipVertical2 } from 'lucide-react';
 import { useSessionStore, UmiTurn } from '@/lib/store';
 import { useRealtimeTranslation } from '@/hooks/useRealtimeTranslation';
 import { toast } from 'sonner';
+
+const LAYOUT_KEY = 'umi_layout_mode';
 
 const langMap: Record<string, string> = {
   auto: 'Auto',
@@ -93,12 +95,36 @@ export default function Session() {
   const [lastTurn, setLastTurn] = useState<UmiTurn | null>(null);
   const [nudge, setNudge] = useState(false);
   const prevLastTurnIdRef = useRef<string | null>(null);
-  // which speaker's language override picker is open (null = none)
   const [langOverrideOpen, setLangOverrideOpen] = useState<1 | 2 | null>(null);
+
+  // Layout mode: face-to-face (Speaker 2 rotated 180°) or side-by-side
+  const [layoutMode, setLayoutMode] = useState<'face-to-face' | 'side-by-side'>(() =>
+    (localStorage.getItem(LAYOUT_KEY) as 'face-to-face' | 'side-by-side') ?? 'side-by-side'
+  );
+  const isFaceToFace = layoutMode === 'face-to-face';
+
+  const toggleLayout = () => {
+    const next = isFaceToFace ? 'side-by-side' : 'face-to-face';
+    setLayoutMode(next);
+    localStorage.setItem(LAYOUT_KEY, next);
+  };
+
+  // Push-to-talk: track whether pointer is currently held
+  const pointerDownRef = useRef(false);
 
   const { phase, latencyMs, canReplay, replayAudio, startTurn, stopRecording, cleanup } = useRealtimeTranslation(sessionId ?? undefined);
   const isRecording = phase === 'recording';
-  const isBusy = phase !== 'idle' && phase !== 'recording';
+  const isConnecting = phase === 'connecting';
+  const isBusy = phase !== 'idle' && phase !== 'recording' && phase !== 'connecting';
+  const isProcessing = phase === 'processing';
+  const isPlaying = phase === 'playing';
+
+  // If pointer was released during the connecting phase, stop as soon as recording starts
+  useEffect(() => {
+    if (phase === 'recording' && !pointerDownRef.current) {
+      stopRecording();
+    }
+  }, [phase, stopRecording]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -109,7 +135,6 @@ export default function Session() {
     }
   }, [loaded, session, setLocation]);
 
-  // nudge fires whenever a new turn lands
   useEffect(() => {
     if (!lastTurn) return;
     if (lastTurn.id === prevLastTurnIdRef.current) return;
@@ -120,7 +145,6 @@ export default function Session() {
     return () => clearTimeout(t);
   }, [lastTurn]);
 
-  // close language override when recording starts
   useEffect(() => {
     if (phase !== 'idle') setLangOverrideOpen(null);
   }, [phase]);
@@ -128,14 +152,17 @@ export default function Session() {
   if (!loaded) return null;
   if (!session) return null;
 
-  const handleMicPress = () => {
-    if (isRecording) { stopRecording(); return; }
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (phase !== 'idle') return;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    pointerDownRef.current = true;
 
     const fromLang = activeSpeaker === 1 ? session.speakerOneLang : session.speakerTwoLang;
     const toLang   = activeSpeaker === 1 ? session.speakerTwoLang : session.speakerOneLang;
 
-    startTurn(fromLang, toLang,
+    startTurn(
+      fromLang,
+      toLang,
       ({ original, translated }) => {
         const turn = addTurn(session.id, { speaker: activeSpeaker, original, translated });
         setLastTurn(turn);
@@ -143,13 +170,18 @@ export default function Session() {
       },
       (msg) => {
         if (msg === 'nothing-heard') {
-          toast('Nothing heard — tap the mic to try again', { icon: '🎙️', duration: 3000 });
+          toast('Nothing heard — hold the mic and speak', { icon: '🎙️', duration: 3000 });
         } else {
           toast.error(msg);
         }
       },
       speakerGender(activeSpeaker),
     );
+  };
+
+  const handlePointerUp = () => {
+    pointerDownRef.current = false;
+    if (phase === 'recording') stopRecording();
   };
 
   const handleLangOverride = (speaker: 1 | 2, lang: string) => {
@@ -160,8 +192,6 @@ export default function Session() {
   };
 
   const isSpeaker1Active = activeSpeaker === 1;
-  const isProcessing = phase === 'processing';
-  const isPlaying = phase === 'playing';
   const nudgeRing = nudge ? 'ring-4 ring-inset ring-primary/60' : '';
 
   return (
@@ -169,10 +199,21 @@ export default function Session() {
 
       {/* Header */}
       <div className="absolute top-0 w-full z-20 flex items-center justify-between p-4 bg-gradient-to-b from-black/20 to-transparent">
-        <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-semibold tracking-wide border border-white/10 flex items-center gap-2 shadow-sm">
-          <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-          Live
-          <SignalBadge latencyMs={latencyMs} />
+        <div className="flex items-center gap-2">
+          <div className="bg-white/20 backdrop-blur-md px-3 py-1.5 rounded-full text-white text-xs font-semibold tracking-wide border border-white/10 flex items-center gap-2 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+            Live
+            <SignalBadge latencyMs={latencyMs} />
+          </div>
+          {/* Face-to-face / side-by-side toggle */}
+          <button
+            onClick={toggleLayout}
+            title={isFaceToFace ? 'Switch to side-by-side' : 'Switch to face-to-face'}
+            className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors backdrop-blur-md border border-white/10 shadow-sm
+              ${isFaceToFace ? 'bg-primary/80 text-white' : 'bg-white/20 text-white/80 hover:bg-white/30'}`}
+          >
+            <FlipVertical2 className="w-4 h-4" />
+          </button>
         </div>
         <Button
           size="sm" variant="ghost"
@@ -189,7 +230,7 @@ export default function Session() {
         className={`flex-1 bg-secondary text-white p-4 pt-16 flex flex-col relative pb-4 transition-all duration-500 ${isSpeaker1Active && nudge ? nudgeRing : ''}`}
         style={{ opacity: isSpeaker1Active ? 1 : 0.5 }}
       >
-        {/* Switch button */}
+        {/* Switch button at panel boundary */}
         <div
           className="absolute bottom-[-20px] left-1/2 -translate-x-1/2 z-10 bg-white shadow-xl rounded-full p-1.5 border border-muted/20 cursor-pointer"
           onClick={() => phase === 'idle' && setActiveSpeaker(activeSpeaker === 1 ? 2 : 1)}
@@ -208,21 +249,11 @@ export default function Session() {
             </span>
             <span className="text-base font-bold text-white">{session.speakerOneName}</span>
 
-            {/* Auto language override — Speaker 1 */}
             {session.speakerOneLang === 'auto' && phase === 'idle' && (
               langOverrideOpen === 1 ? (
-                <LangOverride
-                  langs={ALL_LANGS}
-                  dark={true}
-                  onSelect={lang => handleLangOverride(1, lang)}
-                  onCancel={() => setLangOverrideOpen(null)}
-                />
+                <LangOverride langs={ALL_LANGS} dark={true} onSelect={lang => handleLangOverride(1, lang)} onCancel={() => setLangOverrideOpen(null)} />
               ) : (
-                <button
-                  onClick={() => setLangOverrideOpen(1)}
-                  className="mt-1.5 flex items-center gap-1 text-[11px] text-white/50 hover:text-white/75 transition-colors"
-                  data-testid="button-lang-override-s1"
-                >
+                <button onClick={() => setLangOverrideOpen(1)} className="mt-1.5 flex items-center gap-1 text-[11px] text-white/50 hover:text-white/75 transition-colors" data-testid="button-lang-override-s1">
                   <Globe className="w-3 h-3" />
                   Auto-detect · Lock language?
                 </button>
@@ -260,9 +291,11 @@ export default function Session() {
         </div>
       </div>
 
-      {/* Speaker 2 panel — light, bottom */}
+      {/* Speaker 2 panel — light, bottom; rotated 180° in face-to-face mode */}
       <div
-        className={`flex-1 bg-[#F8F9FA] text-secondary p-4 pt-8 flex flex-col relative pb-20 transition-all duration-500 ${!isSpeaker1Active && nudge ? 'ring-4 ring-inset ring-primary/40' : ''}`}
+        className={`flex-1 bg-[#F8F9FA] text-secondary p-4 pt-8 flex flex-col relative transition-all duration-500
+          ${isFaceToFace ? 'rotate-180 pb-4' : 'pb-20'}
+          ${!isSpeaker1Active && nudge ? 'ring-4 ring-inset ring-primary/40' : ''}`}
         style={{ opacity: !isSpeaker1Active ? 1 : 0.5 }}
       >
         {/* Speaker 2 info row */}
@@ -273,21 +306,11 @@ export default function Session() {
             </span>
             <span className="text-base font-bold text-secondary">{session.speakerTwoName}</span>
 
-            {/* Auto language override — Speaker 2 */}
             {session.speakerTwoLang === 'auto' && phase === 'idle' && (
               langOverrideOpen === 2 ? (
-                <LangOverride
-                  langs={ALL_LANGS}
-                  dark={false}
-                  onSelect={lang => handleLangOverride(2, lang)}
-                  onCancel={() => setLangOverrideOpen(null)}
-                />
+                <LangOverride langs={ALL_LANGS} dark={false} onSelect={lang => handleLangOverride(2, lang)} onCancel={() => setLangOverrideOpen(null)} />
               ) : (
-                <button
-                  onClick={() => setLangOverrideOpen(2)}
-                  className="mt-1.5 flex items-center gap-1 text-[11px] text-secondary/40 hover:text-secondary/65 transition-colors"
-                  data-testid="button-lang-override-s2"
-                >
+                <button onClick={() => setLangOverrideOpen(2)} className="mt-1.5 flex items-center gap-1 text-[11px] text-secondary/40 hover:text-secondary/65 transition-colors" data-testid="button-lang-override-s2">
                   <Globe className="w-3 h-3" />
                   Auto-detect · Lock language?
                 </button>
@@ -325,8 +348,8 @@ export default function Session() {
         </div>
       </div>
 
-      {/* Mic button */}
-      <div className="absolute bottom-8 left-0 w-full flex justify-center z-20">
+      {/* Mic button — centred between panels in face-to-face mode, bottom otherwise */}
+      <div className={`absolute left-0 w-full flex justify-center z-20 ${isFaceToFace ? 'top-1/2 -translate-y-1/2' : 'bottom-8'}`}>
         <div className="relative">
           {isRecording && (
             <>
@@ -335,25 +358,42 @@ export default function Session() {
             </>
           )}
           <button
-            disabled={isBusy && !isRecording}
-            onClick={handleMicPress}
-            className={`relative w-20 h-20 rounded-full flex items-center justify-center shadow-xl shadow-primary/40 border-4 border-white transition-transform active:scale-95 z-10
-              ${isRecording ? 'bg-destructive shadow-destructive/40' : isBusy ? 'bg-secondary/30 opacity-60 cursor-not-allowed' : 'bg-primary'}`}
+            disabled={isBusy}
+            onPointerDown={handlePointerDown}
+            onPointerUp={handlePointerUp}
+            onPointerCancel={handlePointerUp}
+            style={{ touchAction: 'none', userSelect: 'none' }}
+            className={`relative w-20 h-20 rounded-full flex items-center justify-center shadow-xl border-4 border-white transition-transform active:scale-95 z-10 select-none
+              ${isRecording
+                ? 'bg-destructive shadow-destructive/40'
+                : isBusy
+                ? 'bg-secondary/30 opacity-60 cursor-not-allowed shadow-secondary/20'
+                : isConnecting
+                ? 'bg-secondary/50 shadow-secondary/20'
+                : 'bg-primary shadow-primary/40'}`}
             data-testid="button-record"
           >
-            {isBusy && !isRecording ? <Loader2 className="w-8 h-8 text-white animate-spin" />
-              : isRecording ? <Square className="w-8 h-8 text-white fill-white" />
+            {isBusy
+              ? <Loader2 className="w-8 h-8 text-white animate-spin" />
+              : isConnecting
+              ? <Loader2 className="w-8 h-8 text-white animate-spin" />
               : <Mic className="w-8 h-8 text-white" />}
           </button>
 
+          {/* Tooltip */}
           {phase === 'idle' && (
             <div className={`absolute -top-12 left-1/2 -translate-x-1/2 text-white text-sm font-semibold py-1.5 px-4 rounded-full shadow-lg whitespace-nowrap after:content-[''] after:absolute after:bottom-[-6px] after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent ${isSpeaker1Active ? 'bg-secondary after:border-t-secondary' : 'bg-primary after:border-t-primary'}`}>
-              {isSpeaker1Active ? session.speakerOneName : session.speakerTwoName}'s turn
+              Hold · {isSpeaker1Active ? session.speakerOneName : session.speakerTwoName}
             </div>
           )}
-          {phase === 'connecting' && (
+          {isConnecting && (
             <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-white text-sm font-semibold py-1.5 px-4 rounded-full shadow-lg whitespace-nowrap bg-secondary/80">
               Connecting…
+            </div>
+          )}
+          {isRecording && (
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-white text-sm font-semibold py-1.5 px-4 rounded-full shadow-lg whitespace-nowrap bg-destructive">
+              Release to translate
             </div>
           )}
         </div>

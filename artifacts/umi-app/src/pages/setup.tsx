@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Globe2, History, ArrowRight } from 'lucide-react';
+import { History, ArrowRight } from 'lucide-react';
 import { useSessionStore, SpeakerGender } from '@/lib/store';
 
 const GENDERS: { value: SpeakerGender; label: string }[] = [
@@ -68,11 +68,19 @@ export default function Setup() {
       
       <div className="flex-1 flex flex-col p-5 pt-8 pb-4 relative z-10 overflow-y-auto">
         <div className="flex flex-col items-center mb-5 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20 mb-3 text-white">
-            <Globe2 className="w-7 h-7" />
-          </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-secondary mb-1">UMI</h1>
-          <p className="text-secondary/70 font-medium tracking-wide uppercase text-xs">Universal Interpreter</p>
+          <img
+            src={`${import.meta.env.BASE_URL}xlango-mark.png`}
+            alt="xlango"
+            className="w-20 h-20 object-contain"
+            style={{ marginBottom: -8 }}
+          />
+          <img
+            src={`${import.meta.env.BASE_URL}xlango-wordmark.png`}
+            alt="xlango"
+            className="h-9 object-contain"
+            style={{ marginBottom: 4 }}
+          />
+          <p className="text-secondary/60 font-medium tracking-wide uppercase text-xs">Live Global Voice Interpreter</p>
         </div>
 
         <div className="flex-1 flex flex-col gap-4">
