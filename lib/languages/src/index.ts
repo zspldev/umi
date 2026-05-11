@@ -29,6 +29,8 @@ export const LANGUAGES: Language[] = [
   { code: "ja",   label: "Japanese",         native: "日本語"      },
   { code: "de",   label: "German",           native: "Deutsch"    },
   { code: "mr",   label: "Marathi",          native: "मराठी"      },
+  { code: "ta",   label: "Tamil",            native: "தமிழ்"      },
+  { code: "te",   label: "Telugu",           native: "తెలుగు"      }, 
 ];
 
 /**
