@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useLocation } from 'wouter';
 import { Button } from '@/components/ui/button';
-import { Mic, X, Loader2, ArrowRightLeft, Volume2, RotateCcw, Globe, FlipVertical2 } from 'lucide-react';
+import { Mic, X, Loader2, ArrowRightLeft, Volume2, RotateCcw, Globe, FlipVertical2, Square } from 'lucide-react';
 import { useSessionStore, UmiTurn } from '@/lib/store';
 import { useRealtimeTranslation } from '@/hooks/useRealtimeTranslation';
 import { toast } from 'sonner';
@@ -21,9 +21,11 @@ const langMap: Record<string, string> = {
   ja: 'Japanese',
   de: 'German',
   mr: 'Marathi',
+  ta: 'Tamil',
+  te: 'Telugu',
 };
 
-const ALL_LANGS = ['en', 'zh', 'hi', 'es', 'ar', 'pt', 'fr', 'ru', 'ja', 'de', 'mr'] as const;
+const ALL_LANGS = ['en', 'zh', 'hi', 'es', 'ar', 'pt', 'fr', 'ru', 'ja', 'de', 'mr', 'ta', 'te'] as const;
 
 function SignalBadge({ latencyMs }: { latencyMs: number | null }) {
   let color = 'bg-white/30';
@@ -97,7 +99,6 @@ export default function Session() {
   const prevLastTurnIdRef = useRef<string | null>(null);
   const [langOverrideOpen, setLangOverrideOpen] = useState<1 | 2 | null>(null);
 
-  // Layout mode: face-to-face (Speaker 2 rotated 180°) or side-by-side
   const [layoutMode, setLayoutMode] = useState<'face-to-face' | 'side-by-side'>(() =>
     (localStorage.getItem(LAYOUT_KEY) as 'face-to-face' | 'side-by-side') ?? 'side-by-side'
   );
@@ -108,9 +109,6 @@ export default function Session() {
     setLayoutMode(next);
     localStorage.setItem(LAYOUT_KEY, next);
   };
-
-  // Push-to-talk: track whether pointer is currently held
-  const pointerDownRef = useRef(false);
 
   const { phase, latencyMs, canReplay, replayAudio, startTurn, stopRecording, cleanup } = useRealtimeTranslation(sessionId ?? undefined);
   const isRecording = phase === 'recording';
@@ -145,13 +143,22 @@ export default function Session() {
   if (!loaded) return null;
   if (!session) return null;
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+  // Tap-to-toggle: one tap starts, second tap stops
+  const handleMicTap = () => {
+    if (phase === 'recording') {
+      stopRecording();
+      return;
+    }
+    if (phase === 'connecting') {
+      cleanup();
+      return;
+    }
     if (phase !== 'idle') return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    pointerDownRef.current = true;
 
     const fromLang = activeSpeaker === 1 ? session.speakerOneLang : session.speakerTwoLang;
     const toLang   = activeSpeaker === 1 ? session.speakerTwoLang : session.speakerOneLang;
+
+    navigator.vibrate?.(40);
 
     startTurn(
       fromLang,
@@ -163,24 +170,13 @@ export default function Session() {
       },
       (msg) => {
         if (msg === 'nothing-heard') {
-          toast('Nothing heard — hold the mic and speak', { icon: '🎙️', duration: 3000 });
+          toast('Nothing heard — tap the mic and speak', { icon: '🎙️', duration: 3000 });
         } else {
           toast.error(msg);
         }
       },
       speakerGender(activeSpeaker),
     );
-  };
-
-  const handlePointerUp = () => {
-    if (!pointerDownRef.current) return;
-    pointerDownRef.current = false;
-    if (phase === 'recording') {
-      stopRecording();
-    } else if (phase === 'connecting') {
-      // Released before recording started — abort cleanly
-      cleanup();
-    }
   };
 
   const handleLangOverride = (speaker: 1 | 2, lang: string) => {
@@ -191,7 +187,18 @@ export default function Session() {
   };
 
   const isSpeaker1Active = activeSpeaker === 1;
-  const nudgeRing = nudge ? 'ring-4 ring-inset ring-primary/60' : '';
+
+  // Panel ring: nudge on new turn, red glow when recording
+  const sp1Ring = isRecording && isSpeaker1Active
+    ? 'ring-4 ring-inset ring-destructive/60'
+    : nudge && isSpeaker1Active
+    ? 'ring-4 ring-inset ring-primary/60'
+    : '';
+  const sp2Ring = isRecording && !isSpeaker1Active
+    ? 'ring-4 ring-inset ring-destructive/50'
+    : nudge && !isSpeaker1Active
+    ? 'ring-4 ring-inset ring-primary/40'
+    : '';
 
   return (
     <div className="h-[100dvh] w-full max-w-[390px] mx-auto bg-background flex flex-col font-sans relative overflow-hidden">
@@ -204,7 +211,6 @@ export default function Session() {
             Live
             <SignalBadge latencyMs={latencyMs} />
           </div>
-          {/* Face-to-face / side-by-side toggle */}
           <button
             onClick={toggleLayout}
             title={isFaceToFace ? 'Switch to side-by-side' : 'Switch to face-to-face'}
@@ -226,7 +232,7 @@ export default function Session() {
 
       {/* Speaker 1 panel — navy, top */}
       <div
-        className={`flex-1 bg-secondary text-white p-4 pt-16 flex flex-col relative pb-4 transition-all duration-500 ${isSpeaker1Active && nudge ? nudgeRing : ''}`}
+        className={`flex-1 bg-secondary text-white p-4 pt-16 flex flex-col relative pb-4 transition-all duration-300 ${sp1Ring}`}
         style={{ opacity: isSpeaker1Active ? 1 : 0.5 }}
       >
         {/* Switch button at panel boundary */}
@@ -261,6 +267,18 @@ export default function Session() {
           </div>
 
           <div className="flex items-center gap-2">
+            {isSpeaker1Active && isConnecting && (
+              <div className="px-3 py-1 bg-white/10 rounded-full text-white/90 text-sm font-medium flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Connecting…
+              </div>
+            )}
+            {isSpeaker1Active && isRecording && (
+              <div className="px-3 py-1.5 bg-destructive/25 rounded-full text-white text-sm font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Listening…
+              </div>
+            )}
             {isSpeaker1Active && (isProcessing || isPlaying) && (
               <div className="px-3 py-1 bg-white/10 rounded-full text-white/90 text-sm font-medium flex items-center gap-2">
                 {isPlaying ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
@@ -278,13 +296,13 @@ export default function Session() {
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
           {lastTurn?.speaker === 1 && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
-              <p dir="auto" className={`text-xl font-medium leading-snug text-white ${['hi', 'mr'].includes(session.speakerOneLang) ? 'font-devanagari' : ''}`}>{lastTurn.original}</p>
-              <p dir="auto" className={`text-xl italic font-medium leading-snug text-white/80 ${['hi', 'mr'].includes(session.speakerTwoLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
+              <p dir="auto" className={`text-xl font-medium leading-snug text-white ${['hi', 'mr', 'ta', 'te'].includes(session.speakerOneLang) ? 'font-devanagari' : ''}`}>{lastTurn.original}</p>
+              <p dir="auto" className={`text-xl italic font-medium leading-snug text-white/80 ${['hi', 'mr', 'ta', 'te'].includes(session.speakerTwoLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
             </div>
           )}
           {lastTurn?.speaker === 2 && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
-              <p dir="auto" className={`text-xl italic font-medium leading-snug text-white/80 ${['hi', 'mr'].includes(session.speakerOneLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
+              <p dir="auto" className={`text-xl italic font-medium leading-snug text-white/80 ${['hi', 'mr', 'ta', 'te'].includes(session.speakerOneLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
             </div>
           )}
         </div>
@@ -292,9 +310,9 @@ export default function Session() {
 
       {/* Speaker 2 panel — light, bottom; rotated 180° in face-to-face mode */}
       <div
-        className={`flex-1 bg-[#F8F9FA] text-secondary p-4 pt-8 flex flex-col relative transition-all duration-500
-          ${isFaceToFace ? 'rotate-180 pb-4' : 'pb-20'}
-          ${!isSpeaker1Active && nudge ? 'ring-4 ring-inset ring-primary/40' : ''}`}
+        className={`flex-1 bg-[#F8F9FA] text-secondary p-4 pt-8 flex flex-col relative transition-all duration-300
+          ${isFaceToFace ? 'rotate-180 pb-4' : 'pb-24'}
+          ${sp2Ring}`}
         style={{ opacity: !isSpeaker1Active ? 1 : 0.5 }}
       >
         {/* Speaker 2 info row */}
@@ -318,6 +336,18 @@ export default function Session() {
           </div>
 
           <div className="flex items-center gap-2">
+            {!isSpeaker1Active && isConnecting && (
+              <div className="px-3 py-1 bg-secondary/5 rounded-full text-secondary/70 text-sm font-medium flex items-center gap-2">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                Connecting…
+              </div>
+            )}
+            {!isSpeaker1Active && isRecording && (
+              <div className="px-3 py-1.5 bg-destructive/10 rounded-full text-destructive text-sm font-semibold flex items-center gap-2 animate-in fade-in duration-200">
+                <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
+                Listening…
+              </div>
+            )}
             {!isSpeaker1Active && (isProcessing || isPlaying) && (
               <div className="px-3 py-1 bg-secondary/5 rounded-full text-secondary/70 text-sm font-medium flex items-center gap-1.5">
                 {isPlaying ? <Volume2 className="w-3.5 h-3.5 animate-pulse" /> : <Loader2 className="w-3.5 h-3.5 animate-spin" />}
@@ -335,66 +365,69 @@ export default function Session() {
         <div className="flex-1 flex flex-col justify-center max-w-[90%]">
           {lastTurn?.speaker === 2 && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
-              <p dir="auto" className={`text-xl font-medium leading-snug text-secondary ${['hi', 'mr'].includes(session.speakerTwoLang) ? 'font-devanagari' : ''}`}>{lastTurn.original}</p>
-              <p dir="auto" className={`text-xl italic font-medium leading-snug text-secondary/70 ${['hi', 'mr'].includes(session.speakerOneLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
+              <p dir="auto" className={`text-xl font-medium leading-snug text-secondary ${['hi', 'mr', 'ta', 'te'].includes(session.speakerTwoLang) ? 'font-devanagari' : ''}`}>{lastTurn.original}</p>
+              <p dir="auto" className={`text-xl italic font-medium leading-snug text-secondary/70 ${['hi', 'mr', 'ta', 'te'].includes(session.speakerOneLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
             </div>
           )}
           {lastTurn?.speaker === 1 && (
             <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 space-y-3">
-              <p dir="auto" className={`text-xl italic font-medium leading-snug text-secondary/70 ${['hi', 'mr'].includes(session.speakerTwoLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
+              <p dir="auto" className={`text-xl italic font-medium leading-snug text-secondary/70 ${['hi', 'mr', 'ta', 'te'].includes(session.speakerTwoLang) ? 'font-devanagari' : ''}`}>{lastTurn.translated}</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Mic button — centred between panels in face-to-face mode, bottom otherwise */}
-      <div className={`absolute left-0 w-full flex justify-center z-20 ${isFaceToFace ? 'top-1/2 -translate-y-1/2' : 'bottom-8'}`}>
-        <div className="relative">
+      {/* Mic button — centred between panels in face-to-face, bottom otherwise */}
+      <div className={`absolute left-0 w-full flex justify-center z-20 ${isFaceToFace ? 'top-1/2 -translate-y-1/2' : 'bottom-6'}`}>
+        <div className="relative flex justify-center w-[82%]">
+
+          {/* Pulsing rings — visible beyond the button edges when recording */}
           {isRecording && (
             <>
-              <div className="absolute inset-0 rounded-full bg-primary opacity-30 animate-ping" style={{ animationDuration: '2s' }} />
-              <div className="absolute inset-[-10px] rounded-full bg-primary opacity-20 animate-ping" style={{ animationDuration: '2s', animationDelay: '0.5s' }} />
+              <div className="absolute inset-0 rounded-full bg-destructive opacity-25 animate-ping" style={{ animationDuration: '1.4s' }} />
+              <div className="absolute inset-[-8px] rounded-full bg-destructive opacity-15 animate-ping" style={{ animationDuration: '1.4s', animationDelay: '0.35s' }} />
+              <div className="absolute inset-[-18px] rounded-full bg-destructive opacity-10 animate-ping" style={{ animationDuration: '1.4s', animationDelay: '0.7s' }} />
             </>
           )}
+
           <button
             disabled={isBusy}
-            onPointerDown={handlePointerDown}
-            onPointerUp={handlePointerUp}
-            onPointerCancel={handlePointerUp}
+            onClick={handleMicTap}
             style={{ touchAction: 'none', userSelect: 'none' }}
-            className={`relative w-20 h-20 rounded-full flex items-center justify-center shadow-xl border-4 border-white transition-transform active:scale-95 z-10 select-none
+            className={`relative w-full h-16 rounded-full flex items-center justify-center gap-3 shadow-xl border-4 border-white transition-all duration-200 active:scale-[0.97] z-10 select-none
               ${isRecording
-                ? 'bg-destructive shadow-destructive/40'
+                ? 'bg-destructive shadow-destructive/50'
                 : isBusy
                 ? 'bg-secondary/30 opacity-60 cursor-not-allowed shadow-secondary/20'
                 : isConnecting
-                ? 'bg-secondary/50 shadow-secondary/20'
+                ? 'bg-secondary/60 shadow-secondary/20'
                 : 'bg-primary shadow-primary/40'}`}
             data-testid="button-record"
           >
-            {isBusy
-              ? <Loader2 className="w-8 h-8 text-white animate-spin" />
-              : isConnecting
-              ? <Loader2 className="w-8 h-8 text-white animate-spin" />
-              : <Mic className="w-8 h-8 text-white" />}
+            {isBusy ? (
+              <>
+                <Loader2 className="w-6 h-6 text-white animate-spin flex-shrink-0" />
+                <span className="text-white font-bold text-base">Processing…</span>
+              </>
+            ) : isConnecting ? (
+              <>
+                <Loader2 className="w-6 h-6 text-white animate-spin flex-shrink-0" />
+                <span className="text-white font-bold text-base">Connecting…</span>
+              </>
+            ) : isRecording ? (
+              <>
+                <Square className="w-5 h-5 text-white fill-white flex-shrink-0" />
+                <span className="text-white font-bold text-base">Tap to Stop</span>
+              </>
+            ) : (
+              <>
+                <Mic className="w-6 h-6 text-white flex-shrink-0" />
+                <span className="text-white font-bold text-base">
+                  Tap to Speak · {isSpeaker1Active ? session.speakerOneName : session.speakerTwoName}
+                </span>
+              </>
+            )}
           </button>
-
-          {/* Tooltip */}
-          {phase === 'idle' && (
-            <div className={`absolute -top-12 left-1/2 -translate-x-1/2 text-white text-sm font-semibold py-1.5 px-4 rounded-full shadow-lg whitespace-nowrap after:content-[''] after:absolute after:bottom-[-6px] after:left-1/2 after:-translate-x-1/2 after:border-[6px] after:border-transparent ${isSpeaker1Active ? 'bg-secondary after:border-t-secondary' : 'bg-primary after:border-t-primary'}`}>
-              Hold · {isSpeaker1Active ? session.speakerOneName : session.speakerTwoName}
-            </div>
-          )}
-          {isConnecting && (
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-white text-sm font-semibold py-1.5 px-4 rounded-full shadow-lg whitespace-nowrap bg-secondary/80">
-              Connecting…
-            </div>
-          )}
-          {isRecording && (
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-white text-sm font-semibold py-1.5 px-4 rounded-full shadow-lg whitespace-nowrap bg-destructive">
-              Release to translate
-            </div>
-          )}
         </div>
       </div>
     </div>

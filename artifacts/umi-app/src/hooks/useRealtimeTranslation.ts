@@ -10,6 +10,7 @@ export interface TurnResult {
 
 const SILENCE_TIMEOUT_MS = 4000;
 const SPEECH_RMS_THRESHOLD = 0.008;
+const CONNECT_TIMEOUT_MS = 9000;
 
 function base64ToFloat32(base64: string): Float32Array {
   const binary = atob(base64);
@@ -73,15 +74,14 @@ export function useRealtimeTranslation(sessionId?: string) {
   const onErrorRef = useRef<((msg: string) => void) | null>(null);
   const completeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // #14 silence guard
   const silenceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speechDetectedRef = useRef<boolean>(false);
 
-  // #16 latency tracking
+  const connectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const responseCreateTimeRef = useRef<number | null>(null);
   const firstAudioReceivedRef = useRef<boolean>(false);
 
-  // #5 replay: accumulate all audio chunks for the current turn
   const audioChunksRef = useRef<Float32Array[]>([]);
 
   const stopMic = useCallback(() => {
@@ -95,6 +95,13 @@ export function useRealtimeTranslation(sessionId?: string) {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
+    }
+  }, []);
+
+  const clearConnectTimeout = useCallback(() => {
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
     }
   }, []);
 
@@ -135,14 +142,12 @@ export function useRealtimeTranslation(sessionId?: string) {
     switch (msg.type) {
       case 'response.audio.delta': {
         if (!audioCtxRef.current) break;
-        // #16 record latency on first audio chunk
         if (!firstAudioReceivedRef.current && responseCreateTimeRef.current !== null) {
           firstAudioReceivedRef.current = true;
           setLatencyMs(Date.now() - responseCreateTimeRef.current);
         }
         const float32 = base64ToFloat32(msg.delta);
         if (float32.length === 0) break;
-        // #5 store for replay
         audioChunksRef.current.push(float32);
         const ctx = audioCtxRef.current;
         const buf = ctx.createBuffer(1, float32.length, 24000);
@@ -170,7 +175,6 @@ export function useRealtimeTranslation(sessionId?: string) {
         if (outputTranscript) translationRef.current = outputTranscript;
         responseDoneRef.current = true;
 
-        // Report token usage to backend (fire-and-forget)
         const usage = msg.response?.usage;
         if (usage) {
           reportRealtimeUsage(sessionId, {
@@ -217,6 +221,29 @@ export function useRealtimeTranslation(sessionId?: string) {
       completeTimerRef.current = null;
     }
     clearSilenceTimer();
+    clearConnectTimeout();
+
+    // Abort with a user-friendly error if the WebSocket never opens
+    connectTimeoutRef.current = setTimeout(() => {
+      connectTimeoutRef.current = null;
+      stopMic();
+      if (wsRef.current) {
+        wsRef.current.onclose = null;
+        wsRef.current.onerror = null;
+        wsRef.current.onmessage = null;
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close();
+        audioCtxRef.current = null;
+      }
+      const errCb = onErrorRef.current;
+      onCompleteRef.current = null;
+      onErrorRef.current = null;
+      setPhase('idle');
+      errCb?.('Connection timed out — tap to try again');
+    }, CONNECT_TIMEOUT_MS);
 
     let clientSecret: string;
     try {
@@ -231,6 +258,7 @@ export function useRealtimeTranslation(sessionId?: string) {
       const body = await res.json();
       clientSecret = body.clientSecret;
     } catch (e) {
+      clearConnectTimeout();
       onError(e instanceof Error ? e.message : 'Failed to connect');
       setPhase('idle');
       return;
@@ -246,6 +274,9 @@ export function useRealtimeTranslation(sessionId?: string) {
     wsRef.current = ws;
 
     ws.onopen = async () => {
+      // Connection established — cancel the stuck-connecting timeout
+      clearConnectTimeout();
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: { channelCount: 1, sampleRate: 24000, echoCancellation: true, noiseSuppression: true },
@@ -265,7 +296,6 @@ export function useRealtimeTranslation(sessionId?: string) {
           const pcm16 = new Int16Array(e.data.pcm16);
           ws.send(JSON.stringify({ type: 'input_audio_buffer.append', audio: int16ToBase64(pcm16) }));
 
-          // #14 silence guard: reset timer whenever speech is detected
           const rms: number = e.data.rms ?? 0;
           if (rms > SPEECH_RMS_THRESHOLD) {
             speechDetectedRef.current = true;
@@ -279,7 +309,6 @@ export function useRealtimeTranslation(sessionId?: string) {
         source.connect(workletNode);
         setPhase('recording');
 
-        // #14 hard timeout: if no speech at all after SILENCE_TIMEOUT_MS, cancel
         silenceTimerRef.current = setTimeout(() => {
           silenceTimerRef.current = null;
           if (!speechDetectedRef.current) {
@@ -315,6 +344,7 @@ export function useRealtimeTranslation(sessionId?: string) {
     ws.onmessage = (event) => handleMessage(event.data);
 
     ws.onerror = () => {
+      clearConnectTimeout();
       onErrorRef.current?.('WebSocket connection error');
       onErrorRef.current = null;
       onCompleteRef.current = null;
@@ -327,7 +357,7 @@ export function useRealtimeTranslation(sessionId?: string) {
       clearSilenceTimer();
       stopMic();
     };
-  }, [handleMessage, stopMic, clearSilenceTimer, sessionId]);
+  }, [handleMessage, stopMic, clearSilenceTimer, clearConnectTimeout, sessionId]);
 
   const stopRecording = useCallback(() => {
     clearSilenceTimer();
@@ -336,13 +366,11 @@ export function useRealtimeTranslation(sessionId?: string) {
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
       ws.send(JSON.stringify({ type: 'response.create' }));
-      // #16 record the moment we asked for a response
       responseCreateTimeRef.current = Date.now();
     }
     setPhase('processing');
   }, [stopMic, clearSilenceTimer]);
 
-  // #5 replay: create a fresh AudioContext, play all stored chunks, then close it
   const replayAudio = useCallback(() => {
     const chunks = audioChunksRef.current;
     if (chunks.length === 0) return;
@@ -371,6 +399,7 @@ export function useRealtimeTranslation(sessionId?: string) {
       completeTimerRef.current = null;
     }
     clearSilenceTimer();
+    clearConnectTimeout();
     onCompleteRef.current = null;
     onErrorRef.current = null;
     stopMic();
@@ -395,7 +424,7 @@ export function useRealtimeTranslation(sessionId?: string) {
     audioChunksRef.current = [];
     setCanReplay(false);
     setPhase('idle');
-  }, [stopMic, clearSilenceTimer]);
+  }, [stopMic, clearSilenceTimer, clearConnectTimeout]);
 
   useEffect(() => {
     return () => cleanup();
