@@ -78,7 +78,7 @@ export default function Setup() {
           <img
             src={`${import.meta.env.BASE_URL}xlango-wordmark.png`}
             alt="xlango"
-            className="h-9 object-contain"
+            className="h-28 object-contain"
             style={{ marginBottom: 4 }}
           />
           <p className="text-secondary/60 font-medium tracking-wide uppercase text-xs">Live Global Voice Interpreter</p>
