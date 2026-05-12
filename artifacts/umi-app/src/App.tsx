@@ -5,6 +5,8 @@ import { Toaster as SonnerToaster } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Setup from "@/pages/setup";
 import Session from "@/pages/session";
+import TutorSetup from "@/pages/tutor-setup";
+import TutorSession from "@/pages/tutor-session";
 import History from "@/pages/history";
 import SessionDetail from "@/pages/session-detail";
 import NotFound from "@/pages/not-found";
@@ -16,6 +18,8 @@ function Router() {
     <Switch>
       <Route path="/" component={Setup} />
       <Route path="/session" component={Session} />
+      <Route path="/tutor-setup" component={TutorSetup} />
+      <Route path="/tutor-session" component={TutorSession} />
       <Route path="/history" component={History} />
       <Route path="/history/:id" component={SessionDetail} />
       <Route component={NotFound} />

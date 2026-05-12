@@ -20,6 +20,8 @@ export interface UmiSession {
   speakerTwoLang: string;
   speakerOneGender?: SpeakerGender;
   speakerTwoGender?: SpeakerGender;
+  mode?: 'interpret' | 'tutor';
+  scenario?: string;
   turns: UmiTurn[];
 }
 

@@ -39,7 +39,7 @@ function GenderToggle({ value, onChange, accent }: { value: SpeakerGender; onCha
 }
 
 export default function Setup() {
-  const [loc, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { createSession } = useSessionStore();
   
   const [sessionTitle, setSessionTitle] = useState('');
@@ -82,6 +82,21 @@ export default function Setup() {
             style={{ marginBottom: 4 }}
           />
           <p className="text-secondary/60 font-medium tracking-wide uppercase text-xs">Live Global Voice Interpreter</p>
+        </div>
+
+        {/* Mode toggle */}
+        <div className="flex bg-white/60 backdrop-blur-sm rounded-xl p-1 gap-1 mb-4 shadow-sm">
+          <button
+            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all bg-secondary text-white shadow"
+          >
+            Interpret
+          </button>
+          <button
+            onClick={() => setLocation('/tutor-setup')}
+            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-secondary/50 hover:text-secondary/70"
+          >
+            Learn
+          </button>
         </div>
 
         <div className="flex-1 flex flex-col gap-4">
