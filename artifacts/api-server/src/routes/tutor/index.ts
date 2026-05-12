@@ -59,6 +59,7 @@ router.get("/realtime-token", async (req, res) => {
     const nativeLang  = (req.query.nativeLang  as string) || "en";
     const targetLang  = (req.query.targetLang  as string) || "ja";
     const scenario    = (req.query.scenario    as string) || "greetings";
+    const speed       = (req.query.speed       as string) || "normal";
 
     const nativeName  = LANG_NAMES[nativeLang]  ?? nativeLang;
     const targetName  = LANG_NAMES[targetLang]  ?? targetLang;
@@ -101,7 +102,11 @@ ALWAYS:
 • If the learner speaks in ${nativeName} instead of ${targetName}: acknowledge their message in ${nativeName}, give them the exact ${targetName} phrase to repeat, and encourage them to try.
 • If the learner is completely stuck: give them the exact phrase and ask them to repeat it after you.
 • Keep total response length reasonable — scenario line (1 sentence) + coaching (3-4 sentences max).
-• Be warm, patient, and encouraging at all times. Progress matters more than perfection.`;
+• Be warm, patient, and encouraging at all times. Progress matters more than perfection.
+
+SPEAKING PACE: ${speed === 'slow' ? 'Speak SLOWLY and CLEARLY — pause briefly between words in the target language so the learner can hear every sound. This is the most important rule for this session.' : speed === 'fast' ? 'Speak at a natural, conversational pace — do not slow down for the target language phrases. This is a challenge mode.' : 'Speak at a measured, clear pace — not too fast, not artificially slow.'}`;
+
+    const speedValue = speed === 'slow' ? 0.75 : speed === 'fast' ? 1.25 : 1.0;
 
     const session = await (realtimeOpenai.beta.realtime.sessions as any).create({
       model: "gpt-4o-mini-realtime-preview",
@@ -118,6 +123,7 @@ ALWAYS:
         silence_duration_ms: 800,
       },
       temperature: 0.8,
+      speed: speedValue,
     });
 
     const { deviceId, displayName, sessionId, tripCode } = trackingHeaders(req);

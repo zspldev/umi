@@ -85,6 +85,9 @@ export default function Setup() {
             style={{ marginBottom: 4 }}
           />
           <p className="text-secondary/60 font-medium tracking-wide uppercase text-xs">Live Global Voice Interpreter</p>
+          {displayName && displayName !== 'Unknown' && (
+            <p className="text-secondary/50 text-sm mt-1">Welcome back, <span className="font-semibold text-secondary/70">{displayName}</span></p>
+          )}
         </div>
 
         {/* Mode toggle */}

@@ -152,11 +152,12 @@ export function useTutorSession(sessionId?: string) {
   const startSession = useCallback(async (
     nativeLang: string,
     targetLang: string,
-    scenario: string,
+    scenarioRaw: string,
     onLearnerTurn: (text: string) => void,
     onTutorTurn: (text: string) => void,
     onError: (msg: string) => void,
   ) => {
+    const [scenario, speed = 'normal'] = scenarioRaw.split('::');
     setPhase('connecting');
     tutorTextRef.current = '';
     nextPlayRef.current = 0;
@@ -186,7 +187,7 @@ export function useTutorSession(sessionId?: string) {
       const headers: Record<string, string> = { ...trackingHeaders() };
       if (sessionId) headers['X-Session-Id'] = sessionId;
       const res = await fetch(
-        `/api/tutor/realtime-token?nativeLang=${nativeLang}&targetLang=${targetLang}&scenario=${scenario}`,
+        `/api/tutor/realtime-token?nativeLang=${nativeLang}&targetLang=${targetLang}&scenario=${scenario}&speed=${speed}`,
         { headers },
       );
       if (!res.ok) throw new Error(`Token fetch failed: ${res.status}`);

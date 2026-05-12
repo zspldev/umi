@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 import { useSessionStore } from '@/lib/store';
 import { LANGUAGES } from '@workspace/languages';
+import { getDisplayName } from '@/lib/device';
 
 const SCENARIOS = [
   { id: 'greetings',  label: 'Greetings',   icon: '👋', sub: 'Introductions & small talk' },
@@ -23,6 +24,14 @@ const TUTOR_NAMES: Record<string, string> = {
   pt: 'Beatriz', ru: 'Natasha', en: 'Alex',
 };
 
+export type TutorSpeed = 'slow' | 'normal' | 'fast';
+
+const SPEEDS: { id: TutorSpeed; label: string; sub: string }[] = [
+  { id: 'slow',   label: 'Slow',   sub: 'Clear & deliberate' },
+  { id: 'normal', label: 'Normal', sub: 'Natural pace' },
+  { id: 'fast',   label: 'Fast',   sub: 'Challenge yourself' },
+];
+
 const LEARN_LANGS = LANGUAGES.filter(l => l.code !== 'auto');
 const NATIVE_LANGS = LANGUAGES.filter(l => l.code !== 'auto');
 
@@ -30,10 +39,12 @@ export default function TutorSetup() {
   const [, setLocation] = useLocation();
   const { createSession } = useSessionStore();
 
-  const [yourName, setYourName]     = useState('');
+  const displayName = getDisplayName();
+  const [yourName, setYourName]   = useState(displayName && displayName !== 'Unknown' ? displayName : '');
   const [nativeLang, setNativeLang] = useState('en');
   const [targetLang, setTargetLang] = useState('ja');
-  const [scenario, setScenario]     = useState('greetings');
+  const [scenario, setScenario]   = useState('greetings');
+  const [speed, setSpeed]         = useState<TutorSpeed>('normal');
 
   const tutorName = TUTOR_NAMES[targetLang] ?? 'Kai';
   const targetLabel = LEARN_LANGS.find(l => l.code === targetLang)?.label ?? targetLang;
@@ -48,7 +59,7 @@ export default function TutorSetup() {
       speakerTwoLang: targetLang,
       speakerTwoGender: 'unspecified',
       mode: 'tutor',
-      scenario,
+      scenario: `${scenario}::${speed}`,
     });
     setLocation(`/tutor-session?id=${id}`);
   };
@@ -64,6 +75,9 @@ export default function TutorSetup() {
           <img src={`${import.meta.env.BASE_URL}xlango-mark.png`} alt="xlango" className="w-20 h-20 object-contain" style={{ marginBottom: -8 }} />
           <img src={`${import.meta.env.BASE_URL}xlango-wordmark.png`} alt="xlango" className="h-28 object-contain" style={{ marginBottom: 4 }} />
           <p className="text-secondary/60 font-medium tracking-wide uppercase text-xs">Live Language Tutor</p>
+          {displayName && displayName !== 'Unknown' && (
+            <p className="text-secondary/50 text-sm mt-1">Welcome back, <span className="font-semibold text-secondary/70">{displayName}</span></p>
+          )}
         </div>
 
         {/* Mode toggle */}
@@ -135,6 +149,27 @@ export default function TutorSetup() {
                 <p className="text-sm font-semibold text-secondary">{tutorName}</p>
                 <p className="text-xs text-secondary/50">Your {targetLabel} tutor</p>
               </div>
+            </div>
+          </Card>
+
+          {/* Speaking speed */}
+          <Card className="p-4 border-none shadow-md bg-white/80 backdrop-blur-xl rounded-2xl flex flex-col gap-3">
+            <Label className="text-xs font-medium text-secondary/80">Tutor Speaking Speed</Label>
+            <div className="flex gap-2">
+              {SPEEDS.map(s => (
+                <button
+                  key={s.id}
+                  onClick={() => setSpeed(s.id)}
+                  className={`flex-1 flex flex-col items-center py-2.5 px-1 rounded-xl border-2 transition-all
+                    ${speed === s.id
+                      ? 'border-primary bg-primary/5'
+                      : 'border-transparent bg-white/60 hover:bg-white/90'
+                    }`}
+                >
+                  <span className={`text-sm font-bold ${speed === s.id ? 'text-primary' : 'text-secondary'}`}>{s.label}</span>
+                  <span className="text-[10px] text-secondary/40 mt-0.5">{s.sub}</span>
+                </button>
+              ))}
             </div>
           </Card>
 
