@@ -21,16 +21,16 @@ const langMap: Record<string, string> = {
 };
 
 export default function History() {
-  const [loc, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const { sessions, deleteSession } = useSessionStore();
 
   return (
     <div className="min-h-[100dvh] w-full max-w-[390px] mx-auto bg-background flex flex-col font-sans">
       <div className="pt-14 pb-4 px-6 bg-white border-b border-muted/50 sticky top-0 z-10">
         <div className="flex items-center gap-3">
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => setLocation('/')}
             className="w-10 h-10 rounded-full bg-secondary/5 text-secondary hover:bg-secondary/10"
             data-testid="button-back-setup"
@@ -52,16 +52,17 @@ export default function History() {
           sessions.map(session => {
             const date = new Date(session.createdAt);
             const displayTitle = session.title || `${session.speakerOneName} & ${session.speakerTwoName}`;
+            const isLearn = session.mode === 'tutor';
             return (
-              <Card 
-                key={session.id} 
+              <Card
+                key={session.id}
                 className="p-5 border-none shadow-sm bg-white rounded-2xl flex flex-col gap-4 relative group hover:shadow-md transition-shadow cursor-pointer border border-transparent hover:border-primary/20"
                 onClick={() => setLocation(`/history/${session.id}`)}
                 data-testid={`card-session-${session.id}`}
               >
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
+                <Button
+                  variant="ghost"
+                  size="icon"
                   onClick={(e) => {
                     e.stopPropagation();
                     deleteSession(session.id);
@@ -72,15 +73,24 @@ export default function History() {
                   <Trash2 className="w-4 h-4" />
                 </Button>
 
-                <div className="flex items-center gap-2 text-xs font-semibold text-secondary/50 uppercase tracking-wide">
-                  <Clock className="w-3.5 h-3.5" />
-                  {format(date, "MMM d, yyyy")} • {format(date, "h:mm a")}
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 text-xs font-semibold text-secondary/50 uppercase tracking-wide flex-1">
+                    <Clock className="w-3.5 h-3.5" />
+                    {format(date, "MMM d, yyyy")} • {format(date, "h:mm a")}
+                  </div>
+                  <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${
+                    isLearn
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-secondary/10 text-secondary'
+                  }`}>
+                    {isLearn ? '📚 Learn' : '🔄 Interpret'}
+                  </span>
                 </div>
 
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 text-primary font-medium text-sm">
                     <Globe className="w-4 h-4" />
-                    {langMap[session.speakerOneLang]} → {langMap[session.speakerTwoLang]}
+                    {langMap[session.speakerOneLang] ?? session.speakerOneLang} → {langMap[session.speakerTwoLang] ?? session.speakerTwoLang}
                   </div>
                   <h3 className="text-lg font-bold text-secondary pr-10">{displayTitle}</h3>
                   {session.title && (

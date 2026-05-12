@@ -43,9 +43,12 @@ export function useSessionStore() {
     setLoaded(true);
   }, []);
 
-  const saveSessions = useCallback((newSessions: UmiSession[]) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newSessions));
-    setSessions(newSessions);
+  const persist = useCallback((updater: (prev: UmiSession[]) => UmiSession[]) => {
+    setSessions(prev => {
+      const next = updater(prev);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
   }, []);
 
   const createSession = useCallback((session: Omit<UmiSession, 'id' | 'createdAt' | 'turns'>) => {
@@ -53,41 +56,35 @@ export function useSessionStore() {
       ...session,
       id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
-      turns: []
+      turns: [],
     };
-    saveSessions([newSession, ...sessions]);
+    persist(prev => [newSession, ...prev]);
     return newSession.id;
-  }, [sessions, saveSessions]);
+  }, [persist]);
 
   const addTurn = useCallback((sessionId: string, turn: Omit<UmiTurn, 'id' | 'timestamp'>) => {
     const newTurn: UmiTurn = {
       ...turn,
       id: crypto.randomUUID(),
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
-    
-    const updatedSessions = sessions.map(s => {
-      if (s.id === sessionId) {
-        return { ...s, turns: [...s.turns, newTurn] };
-      }
-      return s;
-    });
-    saveSessions(updatedSessions);
+    persist(prev =>
+      prev.map(s => s.id === sessionId ? { ...s, turns: [...s.turns, newTurn] } : s)
+    );
     return newTurn;
-  }, [sessions, saveSessions]);
+  }, [persist]);
 
   const getSession = useCallback((id: string) => {
     return sessions.find(s => s.id === id);
   }, [sessions]);
 
   const updateSession = useCallback((id: string, patch: Partial<Omit<UmiSession, 'id' | 'createdAt' | 'turns'>>) => {
-    const updatedSessions = sessions.map(s => s.id === id ? { ...s, ...patch } : s);
-    saveSessions(updatedSessions);
-  }, [sessions, saveSessions]);
+    persist(prev => prev.map(s => s.id === id ? { ...s, ...patch } : s));
+  }, [persist]);
 
   const deleteSession = useCallback((id: string) => {
-    saveSessions(sessions.filter(s => s.id !== id));
-  }, [sessions, saveSessions]);
+    persist(prev => prev.filter(s => s.id !== id));
+  }, [persist]);
 
   return {
     sessions,
@@ -96,6 +93,6 @@ export function useSessionStore() {
     addTurn,
     updateSession,
     getSession,
-    deleteSession
+    deleteSession,
   };
 }

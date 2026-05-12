@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { History, ArrowRight } from 'lucide-react';
 import { useSessionStore, SpeakerGender } from '@/lib/store';
 import { LANGUAGES } from '@workspace/languages';
+import { getDisplayName } from '@/lib/device';
 
 const GENDERS: { value: SpeakerGender; label: string }[] = [
   { value: 'male',        label: 'Male'   },
@@ -41,9 +42,11 @@ function GenderToggle({ value, onChange, accent }: { value: SpeakerGender; onCha
 export default function Setup() {
   const [, setLocation] = useLocation();
   const { createSession } = useSessionStore();
+
+  const displayName = getDisplayName();
   
   const [sessionTitle, setSessionTitle] = useState('');
-  const [s1Name, setS1Name] = useState('Speaker 1');
+  const [s1Name, setS1Name] = useState(displayName && displayName !== 'Unknown' ? displayName : 'Speaker 1');
   const [s1Lang, setS1Lang] = useState('en');
   const [s1Gender, setS1Gender] = useState<SpeakerGender>('unspecified');
   const [s2Name, setS2Name] = useState('Speaker 2');
