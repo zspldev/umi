@@ -1,5 +1,7 @@
-const DEVICE_ID_KEY = 'xlango_device_id';
+const DEVICE_ID_KEY    = 'xlango_device_id';
 const DISPLAY_NAME_KEY = 'xlango_display_name';
+const TRIP_CODE_KEY    = 'xlango_trip_code';
+const ONBOARDED_KEY    = 'xlango_onboarded';
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -22,10 +24,29 @@ export function setDisplayName(name: string): void {
   localStorage.setItem(DISPLAY_NAME_KEY, name);
 }
 
+export function getTripCode(): string {
+  return localStorage.getItem(TRIP_CODE_KEY) ?? '';
+}
+
+export function setTripCode(code: string): void {
+  localStorage.setItem(TRIP_CODE_KEY, code);
+}
+
+export function isOnboarded(): boolean {
+  return localStorage.getItem(ONBOARDED_KEY) === 'yes';
+}
+
+export function markOnboarded(): void {
+  localStorage.setItem(ONBOARDED_KEY, 'yes');
+}
+
 export function trackingHeaders(): Record<string, string> {
-  return {
-    'X-Device-Id': getDeviceId(),
+  const headers: Record<string, string> = {
+    'X-Device-Id':    getDeviceId(),
     'X-Display-Name': getDisplayName(),
-    'X-App-Source': 'umi-web',
+    'X-App-Source':   'umi-web',
   };
+  const tripCode = getTripCode();
+  if (tripCode) headers['X-Trip-Code'] = tripCode;
+  return headers;
 }

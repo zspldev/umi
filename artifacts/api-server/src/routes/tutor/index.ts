@@ -19,7 +19,8 @@ function trackingHeaders(req: Request) {
   const deviceId = req.headers["x-device-id"] as string | undefined;
   const displayName = req.headers["x-display-name"] as string | undefined;
   const sessionId = req.headers["x-session-id"] as string | undefined;
-  return { deviceId, displayName, sessionId, appSource: "xlango-tutor" };
+  const tripCode = req.headers["x-trip-code"] as string | undefined;
+  return { deviceId, displayName, sessionId, appSource: "xlango-tutor", tripCode };
 }
 
 /** AI tutor persona per target language (v1 — assigned). */
@@ -94,7 +95,7 @@ RULES (follow all strictly):
       temperature: 0.8,
     });
 
-    const { deviceId, displayName, sessionId } = trackingHeaders(req);
+    const { deviceId, displayName, sessionId, tripCode } = trackingHeaders(req);
     upsertUser(deviceId, displayName).catch(() => {});
     upsertSession({
       sessionId,
@@ -102,6 +103,7 @@ RULES (follow all strictly):
       fromLang: nativeLang,
       toLang: targetLang,
       appSource: "xlango-tutor",
+      tripCode,
     }).catch(() => {});
 
     res.json({ clientSecret: session.client_secret.value, tutorName: persona.name });

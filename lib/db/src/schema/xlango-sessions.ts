@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 export const xlangoSessions = pgTable("xlango_sessions", {
   id: text("id").primaryKey(),
   deviceId: text("device_id"),
+  tripCode: text("trip_code"),
   fromLang: text("from_lang").notNull(),
   toLang: text("to_lang").notNull(),
   appSource: text("app_source").notNull().default("unknown"),

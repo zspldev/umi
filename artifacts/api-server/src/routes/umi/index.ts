@@ -34,7 +34,8 @@ function trackingHeaders(req: Request) {
   const displayName = req.headers["x-display-name"] as string | undefined;
   const sessionId = req.headers["x-session-id"] as string | undefined;
   const appSource = (req.headers["x-app-source"] as string | undefined) ?? "unknown";
-  return { deviceId, displayName, sessionId, appSource };
+  const tripCode = req.headers["x-trip-code"] as string | undefined;
+  return { deviceId, displayName, sessionId, appSource, tripCode };
 }
 
 router.post("/transcribe", async (req, res) => {
@@ -250,9 +251,9 @@ STRICT RULES — violating any of these is a critical failure:
     });
 
     // Upsert session row asynchronously
-    const { deviceId, displayName, sessionId, appSource } = trackingHeaders(req);
+    const { deviceId, displayName, sessionId, appSource, tripCode } = trackingHeaders(req);
     upsertUser(deviceId, displayName).catch(() => {});
-    upsertSession({ sessionId, deviceId, fromLang, toLang, appSource }).catch(() => {});
+    upsertSession({ sessionId, deviceId, fromLang, toLang, appSource, tripCode }).catch(() => {});
 
     res.json({ clientSecret: session.client_secret.value });
   } catch (err) {

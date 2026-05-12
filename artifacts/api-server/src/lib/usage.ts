@@ -27,6 +27,7 @@ export async function upsertSession(opts: {
   fromLang: string;
   toLang: string;
   appSource: string;
+  tripCode?: string;
 }): Promise<void> {
   if (!opts.sessionId) return;
   await db
@@ -34,6 +35,7 @@ export async function upsertSession(opts: {
     .values({
       id: opts.sessionId,
       deviceId: opts.deviceId ?? null,
+      tripCode: opts.tripCode ?? null,
       fromLang: opts.fromLang,
       toLang: opts.toLang,
       appSource: opts.appSource,

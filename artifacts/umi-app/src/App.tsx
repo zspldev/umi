@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -9,7 +10,10 @@ import TutorSetup from "@/pages/tutor-setup";
 import TutorSession from "@/pages/tutor-session";
 import History from "@/pages/history";
 import SessionDetail from "@/pages/session-detail";
+import AdminDashboard from "@/pages/admin";
 import NotFound from "@/pages/not-found";
+import OnboardingModal from "@/components/OnboardingModal";
+import { isOnboarded } from "@/lib/device";
 
 const queryClient = new QueryClient();
 
@@ -22,18 +26,22 @@ function Router() {
       <Route path="/tutor-session" component={TutorSession} />
       <Route path="/history" component={History} />
       <Route path="/history/:id" component={SessionDetail} />
+      <Route path="/admin" component={AdminDashboard} />
       <Route component={NotFound} />
     </Switch>
   );
 }
 
 function App() {
+  const [onboarded, setOnboarded] = useState(isOnboarded);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <Router />
         </WouterRouter>
+        {!onboarded && <OnboardingModal onDone={() => setOnboarded(true)} />}
         <Toaster />
         <SonnerToaster position="top-center" richColors />
       </TooltipProvider>
