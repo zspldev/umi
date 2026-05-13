@@ -108,8 +108,8 @@ SPEAKING PACE: ${speed === 'slow' ? 'Speak SLOWLY and CLEARLY — pause briefly 
 
     const speedValue = speed === 'slow' ? 0.75 : speed === 'fast' ? 1.25 : 1.0;
 
-    const session = await (realtimeOpenai.beta.realtime.sessions as any).create({
-      model: "gpt-4o-mini-realtime-preview",
+    const session = await (realtimeOpenai.realtime.clientSecrets as any).create({
+      model: "gpt-realtime-mini",
       voice: persona.voice,
       instructions,
       modalities: ["text", "audio"],
@@ -171,7 +171,7 @@ router.post("/usage/realtime", async (req, res) => {
     logTurn({
       sessionId,
       deviceId,
-      model: "gpt-4o-mini-realtime-preview",
+      model: "gpt-realtime-mini",
       endpoint: "realtime",
       audioInputTokens,
       audioOutputTokens,

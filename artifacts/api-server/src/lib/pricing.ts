@@ -13,7 +13,7 @@ export const TRANSLATE_COST_PER_OUTPUT_TOKEN = 8 / 1_000_000;
 /** gpt-audio TTS: approximately $15 per 1M characters */
 export const TTS_COST_PER_CHAR = 15 / 1_000_000;
 
-/** gpt-4o-mini-realtime-preview audio tokens */
+/** gpt-realtime-mini audio tokens */
 export const REALTIME_AUDIO_INPUT_COST_PER_TOKEN = 10 / 1_000_000;
 export const REALTIME_AUDIO_OUTPUT_COST_PER_TOKEN = 20 / 1_000_000;
 export const REALTIME_TEXT_INPUT_COST_PER_TOKEN = 0.60 / 1_000_000;

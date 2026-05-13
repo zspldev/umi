@@ -63,7 +63,7 @@ See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and pa
 - `id` (serial PK)
 - `session_id` (text, nullable FK) — links to xlango_sessions
 - `device_id` (text, nullable) — denormalized for fast per-user queries
-- `model` (text) — e.g. `"gpt-4o-mini-transcribe"`, `"gpt-5.1"`, `"gpt-audio"`, `"gpt-4o-mini-realtime-preview"`
+- `model` (text) — e.g. `"gpt-4o-mini-transcribe"`, `"gpt-5.1"`, `"gpt-audio"`, `"gpt-realtime-mini"`
 - `endpoint` (text) — `"transcribe"`, `"translate"`, `"speak"`, `"realtime"`
 - `input_tokens`, `output_tokens` (integer, nullable) — for chat completions
 - `audio_input_tokens`, `audio_output_tokens` (integer, nullable) — for Realtime API
@@ -85,10 +85,10 @@ Pricing constants as of May 2025. Update these when OpenAI changes rates:
 | `gpt-5.1` input | $2.00/1M tokens |
 | `gpt-5.1` output | $8.00/1M tokens |
 | `gpt-audio` TTS | $15.00/1M characters |
-| `gpt-4o-mini-realtime` audio input | $10.00/1M tokens |
-| `gpt-4o-mini-realtime` audio output | $20.00/1M tokens |
-| `gpt-4o-mini-realtime` text input | $0.60/1M tokens |
-| `gpt-4o-mini-realtime` text output | $2.40/1M tokens |
+| `gpt-realtime-mini` audio input | $10.00/1M tokens |
+| `gpt-realtime-mini` audio output | $20.00/1M tokens |
+| `gpt-realtime-mini` text input | $0.60/1M tokens |
+| `gpt-realtime-mini` text output | $2.40/1M tokens |
 
 Exports: `calcTranscribeCost`, `calcTranslateCost`, `calcTtsCost`, `calcRealtimeCost`
 

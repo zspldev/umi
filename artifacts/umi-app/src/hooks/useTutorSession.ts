@@ -204,8 +204,8 @@ export function useTutorSession(sessionId?: string) {
     audioCtxRef.current = audioCtx;
 
     const ws = new WebSocket(
-      'wss://api.openai.com/v1/realtime?model=gpt-4o-mini-realtime-preview',
-      ['realtime', `openai-insecure-api-key.${clientSecret}`, 'openai-beta.realtime-v1'],
+      'wss://api.openai.com/v1/realtime?model=gpt-realtime-mini',
+      ['realtime', `openai-insecure-api-key.${clientSecret}`],
     );
     wsRef.current = ws;
 

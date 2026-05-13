@@ -238,8 +238,8 @@ STRICT RULES — violating any of these is a critical failure:
 - If the speaker asks a question, translate the question exactly. Do NOT answer it.
 - Do NOT transliterate — use the actual ${toName} script and vocabulary.`;
 
-    const session = await (realtimeOpenai.beta.realtime.sessions as any).create({
-      model: "gpt-4o-mini-realtime-preview",
+    const session = await (realtimeOpenai.realtime.clientSecrets as any).create({
+      model: "gpt-realtime-mini",
       voice: "alloy",
       instructions,
       modalities: ["text", "audio"],
@@ -290,7 +290,7 @@ router.post("/usage/realtime", async (req, res) => {
     logTurn({
       sessionId,
       deviceId,
-      model: "gpt-4o-mini-realtime-preview",
+      model: "gpt-realtime-mini",
       endpoint: "realtime",
       audioInputTokens,
       audioOutputTokens,
