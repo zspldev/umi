@@ -245,6 +245,11 @@ export function useRealtimeTranslation(sessionId?: string) {
       errCb?.('Connection timed out — tap to try again');
     }, CONNECT_TIMEOUT_MS);
 
+    // Create AudioContext synchronously while still in the user-gesture frame.
+    // If created after an await, browsers auto-suspend it and audio never plays.
+    const audioCtx = new AudioContext({ sampleRate: 24000 });
+    audioCtxRef.current = audioCtx;
+
     let clientSecret: string;
     try {
       const genderParam = speakerGender && speakerGender !== 'unspecified' ? `&gender=${speakerGender}` : '';
@@ -259,13 +264,12 @@ export function useRealtimeTranslation(sessionId?: string) {
       clientSecret = body.clientSecret;
     } catch (e) {
       clearConnectTimeout();
+      audioCtx.close();
+      audioCtxRef.current = null;
       onError(e instanceof Error ? e.message : 'Failed to connect');
       setPhase('idle');
       return;
     }
-
-    const audioCtx = new AudioContext({ sampleRate: 24000 });
-    audioCtxRef.current = audioCtx;
 
     const ws = new WebSocket(
       'wss://api.openai.com/v1/realtime?model=gpt-realtime-mini',

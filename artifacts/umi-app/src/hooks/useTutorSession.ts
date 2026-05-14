@@ -182,6 +182,11 @@ export function useTutorSession(sessionId?: string) {
       setPhase('idle');
     }, CONNECT_TIMEOUT_MS);
 
+    // Create AudioContext synchronously while still in the user-gesture frame.
+    // If created after an await, browsers auto-suspend it and audio never plays.
+    const audioCtx = new AudioContext({ sampleRate: 24000 });
+    audioCtxRef.current = audioCtx;
+
     let clientSecret: string;
     try {
       const headers: Record<string, string> = { ...trackingHeaders() };
@@ -195,13 +200,12 @@ export function useTutorSession(sessionId?: string) {
       clientSecret = body.clientSecret;
     } catch (e) {
       clearConnectTimeout();
+      audioCtx.close();
+      audioCtxRef.current = null;
       onError(e instanceof Error ? e.message : 'Failed to connect');
       setPhase('idle');
       return;
     }
-
-    const audioCtx = new AudioContext({ sampleRate: 24000 });
-    audioCtxRef.current = audioCtx;
 
     const ws = new WebSocket(
       'wss://api.openai.com/v1/realtime?model=gpt-realtime-mini',
@@ -232,6 +236,9 @@ export function useTutorSession(sessionId?: string) {
         source.connect(workletNode);
         setPhase('listening');
         responseStartRef.current = Date.now();
+        // Trigger Yuki's opening orientation immediately and intentionally,
+        // before server VAD can randomly fire on ambient mic noise.
+        ws.send(JSON.stringify({ type: 'response.create' }));
       } catch (e) {
         onErrorRef.current?.(e instanceof Error ? e.message : 'Microphone error');
         onErrorRef.current = null;
