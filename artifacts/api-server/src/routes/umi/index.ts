@@ -238,16 +238,24 @@ STRICT RULES — violating any of these is a critical failure:
 - If the speaker asks a question, translate the question exactly. Do NOT answer it.
 - Do NOT transliterate — use the actual ${toName} script and vocabulary.`;
 
-    const session = await (realtimeOpenai.realtime.clientSecrets as any).create({
-      model: "gpt-realtime-mini",
-      voice: "alloy",
-      instructions,
-      modalities: ["text", "audio"],
-      input_audio_format: "pcm16",
-      output_audio_format: "pcm16",
-      input_audio_transcription: { model: "whisper-1" },
-      turn_detection: null,
-      temperature: 0.6,
+    const result = await (realtimeOpenai.realtime.clientSecrets as any).create({
+      session: {
+        type: "realtime",
+        model: "gpt-realtime-mini",
+        instructions,
+        output_modalities: ["audio"],
+        audio: {
+          input: {
+            format: { type: "audio/pcm", rate: 24000 },
+            transcription: { model: "whisper-1" },
+            turn_detection: null,
+          },
+          output: {
+            format: { type: "audio/pcm", rate: 24000 },
+            voice: "alloy",
+          },
+        },
+      },
     });
 
     // Upsert session row asynchronously
@@ -255,7 +263,7 @@ STRICT RULES — violating any of these is a critical failure:
     upsertUser(deviceId, displayName).catch(() => {});
     upsertSession({ sessionId, deviceId, fromLang, toLang, appSource, tripCode }).catch(() => {});
 
-    res.json({ clientSecret: session.client_secret.value });
+    res.json({ clientSecret: result.value });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create realtime session";
     res.status(500).json({ error: message });

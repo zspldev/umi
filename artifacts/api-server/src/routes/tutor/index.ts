@@ -108,22 +108,30 @@ SPEAKING PACE: ${speed === 'slow' ? 'Speak SLOWLY and CLEARLY — pause briefly 
 
     const speedValue = speed === 'slow' ? 0.75 : speed === 'fast' ? 1.25 : 1.0;
 
-    const session = await (realtimeOpenai.realtime.clientSecrets as any).create({
-      model: "gpt-realtime-mini",
-      voice: persona.voice,
-      instructions,
-      modalities: ["text", "audio"],
-      input_audio_format: "pcm16",
-      output_audio_format: "pcm16",
-      input_audio_transcription: { model: "whisper-1" },
-      turn_detection: {
-        type: "server_vad",
-        threshold: 0.5,
-        prefix_padding_ms: 300,
-        silence_duration_ms: 800,
+    const result = await (realtimeOpenai.realtime.clientSecrets as any).create({
+      session: {
+        type: "realtime",
+        model: "gpt-realtime-mini",
+        instructions,
+        output_modalities: ["audio"],
+        audio: {
+          input: {
+            format: { type: "audio/pcm", rate: 24000 },
+            transcription: { model: "whisper-1" },
+            turn_detection: {
+              type: "server_vad",
+              threshold: 0.5,
+              prefix_padding_ms: 300,
+              silence_duration_ms: 800,
+            },
+          },
+          output: {
+            format: { type: "audio/pcm", rate: 24000 },
+            voice: persona.voice,
+            speed: speedValue,
+          },
+        },
       },
-      temperature: 0.8,
-      speed: speedValue,
     });
 
     const { deviceId, displayName, sessionId, tripCode } = trackingHeaders(req);
@@ -137,7 +145,7 @@ SPEAKING PACE: ${speed === 'slow' ? 'Speak SLOWLY and CLEARLY — pause briefly 
       tripCode,
     }).catch(() => {});
 
-    res.json({ clientSecret: session.client_secret.value, tutorName: persona.name });
+    res.json({ clientSecret: result.value, tutorName: persona.name });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create tutor session";
     res.status(500).json({ error: message });
