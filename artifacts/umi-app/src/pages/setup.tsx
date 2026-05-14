@@ -127,16 +127,18 @@ export default function Setup() {
             </div>
             
             <div className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="user1-name" className="text-xs font-medium text-secondary/80">Your Name</Label>
-                <Input 
-                  id="user1-name" 
-                  value={s1Name}
-                  onChange={e => setS1Name(e.target.value)}
-                  className="h-10 bg-white/50 text-sm" 
-                  data-testid="input-s1-name"
-                />
-              </div>
+              {!(displayName && displayName !== 'Unknown') && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="user1-name" className="text-xs font-medium text-secondary/80">Your Name</Label>
+                  <Input 
+                    id="user1-name" 
+                    value={s1Name}
+                    onChange={e => setS1Name(e.target.value)}
+                    className="h-10 bg-white/50 text-sm" 
+                    data-testid="input-s1-name"
+                  />
+                </div>
+              )}
               
               <div className="space-y-1.5">
                 <Label htmlFor="user1-lang" className="text-xs font-medium text-secondary/80">Language</Label>

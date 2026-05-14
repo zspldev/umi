@@ -99,16 +99,18 @@ export default function TutorSetup() {
 
           {/* Your info */}
           <Card className="p-4 border-none shadow-md bg-white/80 backdrop-blur-xl rounded-2xl flex flex-col gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="your-name" className="text-xs font-medium text-secondary/80">Your Name <span className="text-secondary/40 font-normal">(optional)</span></Label>
-              <Input
-                id="your-name"
-                value={yourName}
-                onChange={e => setYourName(e.target.value)}
-                placeholder="e.g. Alex"
-                className="h-10 bg-white/50 text-sm"
-              />
-            </div>
+            {!(displayName && displayName !== 'Unknown') && (
+              <div className="space-y-1.5">
+                <Label htmlFor="your-name" className="text-xs font-medium text-secondary/80">Your Name <span className="text-secondary/40 font-normal">(optional)</span></Label>
+                <Input
+                  id="your-name"
+                  value={yourName}
+                  onChange={e => setYourName(e.target.value)}
+                  placeholder="e.g. Alex"
+                  className="h-10 bg-white/50 text-sm"
+                />
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label className="text-xs font-medium text-secondary/80">I speak</Label>
               <Select value={nativeLang} onValueChange={setNativeLang}>
