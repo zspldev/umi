@@ -88,7 +88,7 @@ export function useTutorSession(sessionId?: string) {
         break;
       }
 
-      case 'response.audio.delta': {
+      case 'response.output_audio.delta': {
         if (!audioCtxRef.current || !msg.delta) break;
         if (!firstAudioRef.current) {
           firstAudioRef.current = true;
@@ -109,7 +109,7 @@ export function useTutorSession(sessionId?: string) {
         break;
       }
 
-      case 'response.audio_transcript.delta':
+      case 'response.output_audio_transcript.delta':
         tutorTextRef.current += (msg.delta ?? '');
         break;
 

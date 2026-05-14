@@ -140,7 +140,7 @@ export function useRealtimeTranslation(sessionId?: string) {
     try { msg = JSON.parse(data); } catch { return; }
 
     switch (msg.type) {
-      case 'response.audio.delta': {
+      case 'response.output_audio.delta': {
         if (!audioCtxRef.current) break;
         if (!firstAudioReceivedRef.current && responseCreateTimeRef.current !== null) {
           firstAudioReceivedRef.current = true;
@@ -161,7 +161,7 @@ export function useRealtimeTranslation(sessionId?: string) {
         setPhase('playing');
         break;
       }
-      case 'response.audio_transcript.delta':
+      case 'response.output_audio_transcript.delta':
         translationRef.current += (msg.delta ?? '');
         break;
 
