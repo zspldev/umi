@@ -90,6 +90,8 @@ export function useTutorSession(sessionId?: string) {
 
       case 'response.output_audio.delta': {
         if (!audioCtxRef.current || !msg.delta) break;
+        // Resume in case the context was suspended (e.g. strict mobile autoplay policy).
+        if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume().catch(() => {});
         if (!firstAudioRef.current) {
           firstAudioRef.current = true;
           if (responseStartRef.current !== null) setLatencyMs(Date.now() - responseStartRef.current);
@@ -238,7 +240,8 @@ export function useTutorSession(sessionId?: string) {
         responseStartRef.current = Date.now();
         // Trigger Yuki's opening orientation immediately and intentionally,
         // before server VAD can randomly fire on ambient mic noise.
-        ws.send(JSON.stringify({ type: 'response.create' }));
+        // Must specify output_modalities; omitting it defaults to text-only.
+        ws.send(JSON.stringify({ type: 'response.create', response: { output_modalities: ['audio'] } }));
       } catch (e) {
         onErrorRef.current?.(e instanceof Error ? e.message : 'Microphone error');
         onErrorRef.current = null;

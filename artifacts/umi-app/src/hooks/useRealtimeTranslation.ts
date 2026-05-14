@@ -142,6 +142,8 @@ export function useRealtimeTranslation(sessionId?: string) {
     switch (msg.type) {
       case 'response.output_audio.delta': {
         if (!audioCtxRef.current) break;
+        // Resume in case the context was suspended (e.g. strict mobile autoplay policy).
+        if (audioCtxRef.current.state === 'suspended') audioCtxRef.current.resume().catch(() => {});
         if (!firstAudioReceivedRef.current && responseCreateTimeRef.current !== null) {
           firstAudioReceivedRef.current = true;
           setLatencyMs(Date.now() - responseCreateTimeRef.current);
@@ -369,7 +371,8 @@ export function useRealtimeTranslation(sessionId?: string) {
     const ws = wsRef.current;
     if (ws && ws.readyState === WebSocket.OPEN) {
       ws.send(JSON.stringify({ type: 'input_audio_buffer.commit' }));
-      ws.send(JSON.stringify({ type: 'response.create' }));
+      // Must specify output_modalities; omitting it defaults to text-only in GA API.
+      ws.send(JSON.stringify({ type: 'response.create', response: { output_modalities: ['audio'] } }));
       responseCreateTimeRef.current = Date.now();
     }
     setPhase('processing');
