@@ -136,9 +136,16 @@ All routes read tracking headers (`X-Device-Id`, `X-Display-Name`, `X-Session-Id
 | `POST` | `/api/umi/transcribe` | Whisper transcription; logs audio duration + cost |
 | `POST` | `/api/umi/translate` | GPT-5.1 translation; logs prompt/completion tokens + cost |
 | `POST` | `/api/umi/speak` | gpt-audio TTS; logs character count + cost |
-| `POST` | `/api/umi/usage/realtime` | *(new)* Client reports Realtime API usage after `response.done`; logs audio tokens + cost |
+| `POST` | `/api/umi/usage/realtime` | Client reports Realtime API usage after `response.done`; logs audio tokens + cost |
 
-### `/api/umi/usage/realtime` body
+### Tutor backend routes (`src/routes/tutor/index.ts`)
+
+| Method | Path | Description |
+|---|---|---|
+| `GET` | `/api/tutor/realtime-token` | Creates ephemeral tutor session with persona + scenario instructions |
+| `POST` | `/api/tutor/usage/realtime` | Client reports Realtime API usage after `response.done` |
+
+### `/api/umi/usage/realtime` and `/api/tutor/usage/realtime` body
 ```json
 {
   "sessionId": "uuid",
@@ -155,6 +162,74 @@ Returns `{ "ok": true, "costUsd": 0.021 }`.
 - **Production health check**: `GET /api/healthz`
 - **Build**: `pnpm --filter @workspace/api-server run build` → `artifacts/api-server/dist/index.mjs`
 - **Run**: `node --enable-source-maps artifacts/api-server/dist/index.mjs`
+
+---
+
+## OpenAI Realtime API — GA Migration Notes (May 2026)
+
+The GA version of the Realtime API introduced breaking changes from the beta. All active code has been migrated. Key differences:
+
+### Session creation (`clientSecrets.create()`)
+Full session config is nested under `session: { ... }`. Required shape:
+```typescript
+await openai.realtime.clientSecrets.create({
+  session: {
+    type: "realtime",           // required in GA
+    model: "gpt-realtime-mini",
+    instructions,
+    output_modalities: ["audio"],
+    audio: {
+      input: {
+        format: { type: "audio/pcm", rate: 24000 },  // object, not string "pcm16"
+        transcription: { model: "whisper-1" },
+        turn_detection: { type: "server_vad", threshold: 0.5, prefix_padding_ms: 300, silence_duration_ms: 800 },
+      },
+      output: {
+        format: { type: "audio/pcm", rate: 24000 },
+        voice: "shimmer",
+        speed: 1.0,
+      },
+    },
+  },
+});
+// Result field is result.value (not result.client_secret.value)
+```
+
+### WebSocket connection (client-side)
+```typescript
+new WebSocket(
+  'wss://api.openai.com/v1/realtime?model=gpt-realtime-mini',
+  ['realtime', `openai-insecure-api-key.${clientSecret}`],
+  // No "openai-beta.realtime-v1" subprotocol in GA
+)
+```
+
+### Server event renames
+| Beta event | GA event |
+|---|---|
+| `response.audio.delta` | `response.output_audio.delta` |
+| `response.audio_transcript.delta` | `response.output_audio_transcript.delta` |
+| `response.audio.done` | `response.output_audio.done` |
+| `response.audio_transcript.done` | `response.output_audio_transcript.done` |
+
+### `response.create` must specify `output_modalities`
+A bare `{ type: "response.create" }` message defaults to **text-only** output in the GA API. Always include:
+```typescript
+ws.send(JSON.stringify({
+  type: 'response.create',
+  response: { output_modalities: ['audio'] },
+}));
+```
+
+### AudioContext must be created before any `await`
+Browsers auto-suspend an `AudioContext` created outside a synchronous user-gesture frame. Create it at the very top of the async handler, before the token fetch:
+```typescript
+// CORRECT — still in the click-handler call stack
+const audioCtx = new AudioContext({ sampleRate: 24000 });
+const res = await fetch('/api/.../realtime-token');
+// ... rest of setup
+```
+Also add a defensive `audioCtx.resume()` in the audio delta handler for strict mobile autoplay policies.
 
 ---
 
@@ -319,24 +394,56 @@ Mobile-first PWA voice interpreter. Preview path: `/xlango-app/`.
 - PWA manifest + service worker at `/xlango-app/manifest.json` and `/xlango-app/sw.js`
 - Noto Sans Devanagari font loaded for Hindi/Marathi text
 
+**Feature flags** (`src/lib/features.ts`):
+- `TUTOR_ENABLED` — controls the AI Language Tutor ("Learn" mode). Currently `false`. When true: shows Interpret/Learn toggle on Setup, enables `/tutor-setup` and `/tutor-session` routes. When false: toggle hidden, routes redirect to `/`.
+
 **Speaker languages:**
 Managed centrally via `@workspace/languages` — see the Shared Languages Library section above.
 Both speaker dropdowns render dynamically from the shared `LANGUAGES` array; no hardcoded list in this app.
 
 **Audio pipeline (session.tsx) — Realtime API:**
-1. Tap mic → `GET /api/umi/realtime-token?fromLang=X&toLang=Y` with tracking headers
-2. Browser opens WebSocket to `wss://api.openai.com/v1/realtime` using ephemeral key
-3. AudioWorklet (`public/audio-processor.js`) captures PCM16 at 24kHz, streams chunks via `input_audio_buffer.append`
-4. Tap stop → `input_audio_buffer.commit` + `response.create`
-5. Model streams back audio deltas → played in real-time via `AudioContext` (zero-gap scheduling)
-6. `response.done` → usage extracted from `msg.response.usage` → `POST /api/umi/usage/realtime` (fire-and-forget)
-7. `conversation.item.input_audio_transcription.completed` → turn saved to store
+1. `AudioContext` created synchronously at button-tap (before any `await`) to stay in the user-gesture frame
+2. Tap mic → `GET /api/umi/realtime-token?fromLang=X&toLang=Y` with tracking headers
+3. Browser opens WebSocket to `wss://api.openai.com/v1/realtime` using ephemeral `ek_` key
+4. AudioWorklet (`public/audio-processor.js`) captures PCM16 at 24kHz, streams chunks via `input_audio_buffer.append`
+5. Tap stop → `input_audio_buffer.commit` + `response.create` (with `response: { output_modalities: ['audio'] }`)
+6. Model streams back audio deltas (`response.output_audio.delta`) → played in real-time via `AudioContext` (zero-gap scheduling)
+7. `response.done` → usage extracted from `msg.response.usage` → `POST /api/umi/usage/realtime` (fire-and-forget)
+8. `conversation.item.input_audio_transcription.completed` → turn saved to store
 - Hook: `artifacts/umi-app/src/hooks/useRealtimeTranslation.ts`
 - Accepts optional `sessionId` param — passed through to all tracking calls
 - Total latency: ~300–500ms
 
 **Key files:**
-- `src/hooks/useRealtimeTranslation.ts` — WebSocket + AudioWorklet hook; sends tracking headers, reports usage after `response.done`
+- `src/lib/features.ts` — feature flags (`TUTOR_ENABLED`)
+- `src/hooks/useRealtimeTranslation.ts` — WebSocket + AudioWorklet hook for the interpreter; sends tracking headers, reports usage after `response.done`
+- `src/hooks/useTutorSession.ts` — WebSocket hook for the AI tutor (guarded by `TUTOR_ENABLED`)
 - `src/lib/device.ts` — device ID (localStorage UUID), display name, `trackingHeaders()` helper
 - `public/audio-processor.js` — AudioWorklet processor (PCM16 capture)
-- `@workspace/integrations-openai-ai-server/audio` — speechToText, textToSpeech (legacy, used by XLango)
+
+---
+
+## AI Language Tutor — Learn Feature (`TUTOR_ENABLED = false`)
+
+> Currently hidden. Set `TUTOR_ENABLED = true` in `src/lib/features.ts` to re-enable.
+
+**What it is:** A bilingual AI tutor that role-plays scenarios (restaurant, transport, greetings, etc.) to help learners practise a target language with coaching in their native language.
+
+**Personas** (one per target language, defined in `artifacts/api-server/src/routes/tutor/index.ts`):
+- Japanese → Yuki (shimmer voice), Spanish → Elena (coral), French → Léa (shimmer), Hindi → Arjun (alloy), Mandarin → Wei (echo), German → Lukas (alloy), Arabic → Layla (shimmer), Marathi → Priya (coral), Portuguese → Beatriz (coral), Russian → Natasha (shimmer), English → Alex (alloy)
+
+**Scenarios:** greetings, restaurant, transport, shopping, emergency
+
+**Pages:**
+- `/tutor-setup` (`src/pages/tutor-setup.tsx`) — pick native lang, target lang, scenario, speed
+- `/tutor-session` (`src/pages/tutor-session.tsx`) — live bilingual coaching session
+
+**Audio pipeline:**
+- Same GA Realtime API pattern as interpreter (see GA Migration Notes above)
+- Uses `server_vad` for turn detection (always-on mic)
+- Sends explicit `response.create` with `output_modalities: ['audio']` on connect to trigger Yuki's opening orientation once, deterministically
+- Hook: `src/hooks/useTutorSession.ts`
+
+**Known issues to address before re-enabling:**
+- Audio quality and response consistency need further testing
+- UX flow for the opening orientation speech needs refinement

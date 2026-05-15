@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch, Route, Router as WouterRouter } from "wouter";
+import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as SonnerToaster } from "sonner";
@@ -14,6 +14,7 @@ import AdminDashboard from "@/pages/admin";
 import NotFound from "@/pages/not-found";
 import OnboardingModal from "@/components/OnboardingModal";
 import { isOnboarded } from "@/lib/device";
+import { TUTOR_ENABLED } from "@/lib/features";
 
 const queryClient = new QueryClient();
 
@@ -22,8 +23,17 @@ function Router() {
     <Switch>
       <Route path="/" component={Setup} />
       <Route path="/session" component={Session} />
-      <Route path="/tutor-setup" component={TutorSetup} />
-      <Route path="/tutor-session" component={TutorSession} />
+      {TUTOR_ENABLED ? (
+        <>
+          <Route path="/tutor-setup" component={TutorSetup} />
+          <Route path="/tutor-session" component={TutorSession} />
+        </>
+      ) : (
+        <>
+          <Route path="/tutor-setup">{() => <Redirect to="/" />}</Route>
+          <Route path="/tutor-session">{() => <Redirect to="/" />}</Route>
+        </>
+      )}
       <Route path="/history" component={History} />
       <Route path="/history/:id" component={SessionDetail} />
       <Route path="/admin" component={AdminDashboard} />

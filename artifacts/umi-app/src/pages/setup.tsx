@@ -9,6 +9,7 @@ import { History, ArrowRight } from 'lucide-react';
 import { useSessionStore, SpeakerGender } from '@/lib/store';
 import { LANGUAGES } from '@workspace/languages';
 import { getDisplayName } from '@/lib/device';
+import { TUTOR_ENABLED } from '@/lib/features';
 
 const GENDERS: { value: SpeakerGender; label: string }[] = [
   { value: 'male',        label: 'Male'   },
@@ -90,20 +91,22 @@ export default function Setup() {
           )}
         </div>
 
-        {/* Mode toggle */}
-        <div className="flex bg-white/60 backdrop-blur-sm rounded-xl p-1 gap-1 mb-4 shadow-sm">
-          <button
-            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all bg-secondary text-white shadow"
-          >
-            Interpret
-          </button>
-          <button
-            onClick={() => setLocation('/tutor-setup')}
-            className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-secondary/50 hover:text-secondary/70"
-          >
-            Learn
-          </button>
-        </div>
+        {/* Mode toggle — Learn tab hidden while TUTOR_ENABLED = false */}
+        {TUTOR_ENABLED && (
+          <div className="flex bg-white/60 backdrop-blur-sm rounded-xl p-1 gap-1 mb-4 shadow-sm">
+            <button
+              className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all bg-secondary text-white shadow"
+            >
+              Interpret
+            </button>
+            <button
+              onClick={() => setLocation('/tutor-setup')}
+              className="flex-1 py-2 rounded-lg text-sm font-semibold transition-all text-secondary/50 hover:text-secondary/70"
+            >
+              Learn
+            </button>
+          </div>
+        )}
 
         <div className="flex-1 flex flex-col gap-4">
           <Card className="p-4 border-none shadow-md bg-white/80 backdrop-blur-xl rounded-2xl flex flex-col gap-3">
